@@ -60,7 +60,18 @@ export const BhajanList: React.FC<BhajanListProps> = ({
          }
       } else {
          // Devanagari Mode
-         targetKeys.push(getDevanagariBaseChar(bhajan.title));
+         const baseChar = getDevanagariBaseChar(bhajan.title);
+         
+         // Group vowels (Short & Long) together as per requirement
+         const vowelMap: Record<string, string> = {
+            'आ': 'अ',
+            'ई': 'इ',
+            'ऊ': 'उ',
+            'ऐ': 'ए',
+            'औ': 'ओ',
+         };
+         
+         targetKeys.push(vowelMap[baseChar] || baseChar);
       }
       
       // Add to all identified groups
@@ -142,7 +153,7 @@ export const BhajanList: React.FC<BhajanListProps> = ({
 
                       {authorName && (
                         <div className="flex">
-                           <span className="text-[11px] text-saffron-700 dark:text-saffron-300 font-semibold bg-saffron-50 dark:bg-saffron-900/30 px-2 py-0.5 rounded-md border border-saffron-100 dark:border-saffron-900/50">
+                           <span className="text-[11px] text-saffron-600 dark:text-saffron-400 font-bold font-hindi">
                               {authorName}
                            </span>
                         </div>
@@ -194,7 +205,7 @@ export const BhajanList: React.FC<BhajanListProps> = ({
                         </h3>
                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             {authorName && (
-                              <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                              <span className="text-[11px] text-saffron-600 dark:text-saffron-400 font-bold font-hindi">
                                 {authorName}
                               </span>
                             )}

@@ -37,7 +37,7 @@ export const BookList: React.FC<BookListProps> = ({ books }) => {
                         onClick={() => handleBookClick(book)}
                         className="w-full text-left p-4 hover:bg-saffron-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-4 group"
                     >
-                        <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 border border-red-200 dark:border-red-900/30">
+                        <div className="w-10 h-10 rounded-lg bg-saffron-100 dark:bg-saffron-900/20 text-saffron-600 dark:text-saffron-400 flex items-center justify-center shrink-0 border border-saffron-200 dark:border-saffron-900/30">
                             <span className="text-[10px] font-bold">PDF</span>
                         </div>
                         

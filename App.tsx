@@ -63,9 +63,8 @@ export const App: React.FC = () => {
   const [devMode, setDevMode] = useState<boolean>(false);
 
   // Sorting State
-  const [indexMode, setIndexMode] = useState<'latin' | 'devanagari'>(() => {
-    return (localStorage.getItem('cpbs_index_mode') as 'latin' | 'devanagari') || 'devanagari';
-  });
+  // Default to 'devanagari' every time app opens (do not read from localStorage for init)
+  const [indexMode, setIndexMode] = useState<'latin' | 'devanagari'>('devanagari');
 
   const [historyIds, setHistoryIds] = useState<string[]>(() => {
      try {
@@ -501,9 +500,11 @@ export const App: React.FC = () => {
       )}
 
       {/* --- FIXED HEADER --- */}
-      <header className="fixed top-0 left-0 right-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 pt-[env(safe-area-inset-top)]">
+      {/* Force orange background even in dark mode */}
+      <header className="fixed top-0 left-0 right-0 z-30 bg-saffron-500 shadow-md transition-all duration-300 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2 p-2 h-16 max-w-3xl mx-auto">
-           <button onClick={handleOpenMenu} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
+           {/* White buttons since header is always orange */}
+           <button onClick={handleOpenMenu} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0">
               <Menu className="w-6 h-6" />
            </button>
            
@@ -512,7 +513,7 @@ export const App: React.FC = () => {
                  <input
                     type="text"
                     placeholder="Search bhajans..."
-                    className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 border border-transparent focus:border-saffron-400 dark:focus:border-saffron-500 rounded-full py-2 pl-10 pr-10 focus:outline-none focus:ring-2 focus:ring-saffron-200 dark:focus:ring-saffron-900/30 transition-all shadow-inner h-10"
+                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 border-none focus:ring-2 focus:ring-white/50 rounded-full py-2 pl-10 pr-10 shadow-inner h-10 outline-none"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
@@ -565,7 +566,7 @@ export const App: React.FC = () => {
               )}
            </div>
 
-           <button onClick={handleOpenSettings} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
+           <button onClick={handleOpenSettings} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0">
               <Settings className="w-6 h-6" />
            </button>
         </div>
