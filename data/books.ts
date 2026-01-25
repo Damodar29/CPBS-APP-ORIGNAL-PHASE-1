@@ -42,19 +42,19 @@ export const BOOKS_DATA: Book[] = [
     id: '6', 
     title: 'गौरांग भजन माला भाग 3', 
     fileName: 'गौरांग भजन माला भाग 3.pdf', 
-    url: 'https://drive.google.com/file/d/1a2KthvrokOfJ8yiR_Pm_RQja2_9isFbi/view?usp=drive_link' 
+    url: 'https://drive.google.com/file/d/1B9EcKW8yp0Z1abaOThpy12Iv7WOikeF9/view?usp=drive_link' 
   },
   { 
     id: '7', 
     title: 'गौरांग भजन माला', 
     fileName: 'गौरांग भजन माला.pdf', 
-    url: 'https://drive.google.com/file/d/1B9EcKW8yp0Z1abaOThpy12Iv7WOikeF9/view?usp=drive_link' 
+    url: 'https://drive.google.com/file/d/17JizBU2G7gz2LFDJ69g7CvtADoQjYab1/view?usp=drive_link' 
   },
   { 
     id: '8', 
     title: 'गौड़ीय गीति गुच्छ', 
     fileName: 'गौड़ीय गीति गुच्छ.pdf', 
-    url: 'https://drive.google.com/file/d/17JizBU2G7gz2LFDJ69g7CvtADoQjYab1/view?usp=drive_link' 
+    url: 'https://drive.google.com/file/d/1a2KthvrokOfJ8yiR_Pm_RQja2_9isFbi/view?usp=drive_link' 
   },
   { 
     id: '9', 
@@ -84,7 +84,7 @@ export const BOOKS_DATA: Book[] = [
     id: '13', 
     title: 'भजन संकलन भूषण', 
     fileName: 'भजन संकलन भूषण.pdf', 
-    url: 'https://drive.google.com/file/d/1a2KthvrokOfJ8yiR_Pm_RQja2_9isFbi/view?usp=drive_link' 
+    url: 'https://drive.google.com/file/d/1QfOnQG7ay0ezejb5MbDLoxJzJBrywv9g/view?usp=drive_link' 
   },
   { 
     id: '14', 
