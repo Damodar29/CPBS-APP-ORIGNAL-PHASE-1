@@ -12,11 +12,12 @@ export const AzSlider: React.FC<AzSliderProps> = ({ sortedKeys, onSelect, indexM
   if (sortedKeys.length === 0) return null;
 
   return (
-    <div className="fixed top-[64px] bottom-[66px] right-0 z-35 flex flex-col items-end pointer-events-none">
-      {/* Container: Narrower width (w-9 = 36px) for reduced horizontal footprint */}
+    // Adjusted top/bottom to account for Header (4rem) + safe area and BottomNav + safe area
+    // Top: 4rem (header) + 1rem (spacing) + env(safe-area-inset-top)
+    // Bottom: 4rem (footer) + 1rem (spacing) + env(safe-area-inset-bottom)
+    <div className="fixed top-[calc(5rem+env(safe-area-inset-top))] bottom-[calc(5rem+env(safe-area-inset-bottom))] right-0 z-20 flex flex-col items-end pointer-events-none">
       <div className="h-full w-9 bg-saffron-50/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm border-l border-saffron-200 dark:border-slate-700 flex flex-col pointer-events-auto rounded-l-lg overflow-hidden">
         
-        {/* Toggle Button */}
         <button 
            onClick={(e) => {
              e.stopPropagation();
@@ -30,9 +31,7 @@ export const AzSlider: React.FC<AzSliderProps> = ({ sortedKeys, onSelect, indexM
             </span>
         </button>
 
-        {/* List Container */}
         {indexMode === 'latin' ? (
-            // English: Fit vertically without slider
             <div className="flex-1 flex flex-col py-1 overflow-hidden">
                 {sortedKeys.map(key => (
                     <button 
@@ -41,16 +40,13 @@ export const AzSlider: React.FC<AzSliderProps> = ({ sortedKeys, onSelect, indexM
                         e.stopPropagation();
                         onSelect(key);
                       }}
-                      // Flex-1 allows items to fill available height evenly
-                      // max-h restricts them from becoming too large if few items exist
-                      className="flex-1 max-h-8 w-full flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 active:text-saffron-600 dark:active:text-saffron-400 transition-none select-none"
+                      className="flex-1 max-h-8 w-full flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 active:text-saffron-600 dark:active:text-saffron-400 transition-none select-none hover:bg-black/5 dark:hover:bg-white/5"
                     >
                         {key}
                     </button>
                 ))}
             </div>
         ) : (
-            // Hindi: Scrollable
             <div className="flex-1 overflow-y-auto no-scrollbar py-1 flex flex-col">
                 {sortedKeys.map(key => (
                     <button 
@@ -59,13 +55,11 @@ export const AzSlider: React.FC<AzSliderProps> = ({ sortedKeys, onSelect, indexM
                         e.stopPropagation();
                         onSelect(key);
                       }}
-                      // Fixed height for scrolling list
                       className="shrink-0 h-8 w-full flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-saffron-600 dark:hover:text-saffron-400 active:bg-saffron-100 dark:active:bg-slate-700 transition-colors select-none"
                     >
                         {key}
                     </button>
                 ))}
-                {/* Spacer at bottom */}
                 <div className="h-8 shrink-0" />
             </div>
         )}

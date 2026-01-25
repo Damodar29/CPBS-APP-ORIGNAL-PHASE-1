@@ -13,9 +13,16 @@ export interface Bhajan {
   authorIAST?: string; // English/IAST Name
 }
 
+export interface Book {
+  id: string;
+  title: string;
+  fileName: string;
+  url?: string; // Optional URL for online viewing (e.g., GDrive)
+}
+
 export type FontSize = number;
 export type ScriptType = 'devanagari' | 'iast';
-export type AppTab = 'songs' | 'authors' | 'history';
+export type AppTab = 'songs' | 'books' | 'history';
 
 export interface AppSettings {
   darkMode: boolean;

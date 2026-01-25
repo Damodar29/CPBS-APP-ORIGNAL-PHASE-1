@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Moon, Sun, Check, Plus, Database, RotateCcw, Copy, Lock, RefreshCcw } from 'lucide-react';
+import { X, Moon, Sun, Check, Plus, Database, RotateCcw, Copy, Lock, RefreshCcw, MessageCircle, Languages } from 'lucide-react';
 import { FontSize, ScriptType, Bhajan } from '../types';
 import { RAW_BHAJAN_DATA } from '../data/rawBhajans';
 import { parseRawBhajanText } from '../utils/textProcessor';
@@ -16,6 +16,8 @@ interface SettingsScreenProps {
   onThemeChange: (isDark: boolean) => void;
   keepAwake: boolean;
   onKeepAwakeChange: (val: boolean) => void;
+  settingsLanguage: 'en' | 'hi';
+  onSettingsLanguageChange: (lang: 'en' | 'hi') => void;
   devMode: boolean;
   onDevModeChange: (val: boolean) => void;
   onResetData: () => void;
@@ -26,20 +28,79 @@ interface SettingsScreenProps {
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   isOpen, onClose, fontSize, onFontSizeChange, script, onScriptChange, 
-  darkMode, onThemeChange, keepAwake, onKeepAwakeChange, devMode, onDevModeChange,
+  darkMode, onThemeChange, keepAwake, onKeepAwakeChange, 
+  settingsLanguage, onSettingsLanguageChange,
+  devMode, onDevModeChange,
   onResetData, onRestoreDeleted, onAddBhajan, allBhajans
 }) => {
   // Use Ref for click counting to avoid re-renders and ensure reliability during rapid clicking
   const clickCountRef = useRef(0);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Timer for long press disable
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [authAction, setAuthAction] = useState<'ENABLE' | 'DISABLE'>('ENABLE');
   const [showDisabledMsg, setShowDisabledMsg] = useState(false);
+
+  // Translations
+  const t = {
+    en: {
+      title: "Settings",
+      fontSize: "Font Size of the Songs",
+      contentLang: "Song Language",
+      theme: "Theme of the App",
+      themeLight: "Light Mode (Gauranga)",
+      themeDark: "Dark Mode (Shyam)",
+      other: "Other Settings",
+      keepAwake: "Keep the song screen awake",
+      feedback: "Feedback",
+      sendFeedback: "Send Feedback on WhatsApp",
+      workInProgress: "This app is a work in progress. If found any problems pls send feedback.",
+      settingsLang: "Settings Language",
+      devOptions: "Developer Options (Do not Touch)",
+      adminPanel: "Admin Panel",
+      devEnabled: "Developer Mode Enabled (Tap 10x to Disable)",
+      devDisabled: "Developer Mode Disabled",
+      devSectionTitle: "Developer Options",
+      devSectionDesc: "You can now Add, Edit and Delete songs. Changes are saved locally.",
+      addBhajan: "Add New Bhajan",
+      exportChanges: "Export Changes Only",
+      restoreSongs: "Restore Deleted Songs",
+      resetFactory: "Reset to Factory Data",
+      enterPass: "Enter Developer Password",
+      passDisable: "Password to Disable",
+      cancel: "Cancel",
+      submit: "Submit"
+    },
+    hi: {
+      title: "सेटिंग्स",
+      fontSize: "भजन के अक्षरों का आकार",
+      contentLang: "भजन की भाषा",
+      theme: "ऐप का थीम",
+      themeLight: "लाइट मोड (गौरांग)",
+      themeDark: "डार्क मोड (श्याम)",
+      other: "अन्य सेटिंग्स",
+      keepAwake: "स्क्रीन को जगाए रखें",
+      feedback: "सुझाव",
+      sendFeedback: "व्हाट्सएप पर सुझाव भेजें",
+      workInProgress: "यह ऐप निर्माणाधीन है। यदि कोई समस्या मिले तो कृपया सुझाव भेजें।",
+      settingsLang: "सेटिंग्स की भाषा",
+      devOptions: "डेवलपर विकल्प (कृपया छेड़छाड़ न करें)",
+      adminPanel: "एडमिन पैनल",
+      devEnabled: "डेवलपर मोड सक्षम है (अक्षम करने के लिए 10 बार टैप करें)",
+      devDisabled: "डेवलपर मोड अक्षम है",
+      devSectionTitle: "डेवलपर विकल्प",
+      devSectionDesc: "अब आप भजन जोड़, संपादित और हटा सकते हैं। परिवर्तन स्थानीय रूप से सहेजे जाते हैं।",
+      addBhajan: "नया भजन जोड़ें",
+      exportChanges: "केवल परिवर्तन निर्यात करें",
+      restoreSongs: "हटाए गए भजन पुनर्स्थापित करें",
+      resetFactory: "फैक्ट्री डेटा रीसेट करें",
+      enterPass: "डेवलपर पासवर्ड दर्ज करें",
+      passDisable: "अक्षम करने के लिए पासवर्ड",
+      cancel: "रद्द करें",
+      submit: "जमा करें"
+    }
+  }[settingsLanguage];
 
   // Reset click count when closing settings
   useEffect(() => {
@@ -49,16 +110,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setShowDisabledMsg(false);
       setPasswordInput('');
       if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     }
   }, [isOpen]);
 
-  // --- Logic to Enable (7 Taps) ---
+  // --- Logic to Toggle Dev Mode (10 Continuous Taps) ---
   const handleSecretClick = () => {
-    // Only allow enabling via tapping if currently disabled
-    if (devMode) return; 
-
-    // Clear the reset timer on every click
+    // Clear the reset timer on every click to keep the sequence alive
     if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
 
     clickCountRef.current += 1;
@@ -68,32 +125,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       clickCountRef.current = 0;
     }, 1000);
 
-    if (clickCountRef.current >= 7) {
+    if (clickCountRef.current >= 10) {
       clickCountRef.current = 0;
       if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
       
-      // Open Modal to Enable
-      setAuthAction('ENABLE');
+      if (devMode) {
+          // If enabled, 10 taps disables it
+          setAuthAction('DISABLE');
+      } else {
+          // If disabled, 10 taps enables it
+          setAuthAction('ENABLE');
+      }
       setShowPasswordModal(true);
-    }
-  };
-
-  // --- Logic to Disable (Long Press 3s) ---
-  const handlePressStart = () => {
-    if (!devMode) return; // Only for disabling
-
-    longPressTimerRef.current = setTimeout(() => {
-        // Trigger password modal for disable
-        if (navigator.vibrate) navigator.vibrate(50);
-        setAuthAction('DISABLE');
-        setShowPasswordModal(true);
-    }, 3000); // 3 seconds hold
-  };
-
-  const handlePressEnd = () => {
-    if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
     }
   };
 
@@ -102,7 +145,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     if (passwordInput === "413541") {
         setShowPasswordModal(false);
         setPasswordInput('');
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate([100, 50, 100]); } catch (e) { /* safe fail */ }
+        }
 
         if (authAction === 'ENABLE') {
              onDevModeChange(true);
@@ -110,7 +155,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         } else {
              // Disable Flow
              setShowDisabledMsg(true);
-             // Wait 2 seconds before actually reverting state
+             // Wait 2 seconds before actually reverting state to show the disabled message
              setTimeout(() => {
                  onDevModeChange(false);
                  setShowDisabledMsg(false);
@@ -120,6 +165,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         alert("Incorrect Password");
         setPasswordInput('');
     }
+  };
+
+  const handleFeedback = () => {
+    // Feedback combined with WhatsApp
+    window.open('https://wa.me/917049304733', '_blank');
   };
 
   const handleExportChanges = () => {
@@ -188,49 +238,56 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
     const dataStr = JSON.stringify(exportObj, null, 2);
     
-    navigator.clipboard.writeText(dataStr).then(() => {
-        const stats = [];
-        if (changes.modified.length) stats.push(`${changes.modified.length} Modified`);
-        if (changes.added.length) stats.push(`${changes.added.length} Added`);
-        if (changes.deleted.length) stats.push(`${changes.deleted.length} Deleted`);
-        
-        alert(`Export Successful!\n\nChanges Detected: ${stats.join(', ')}\n\nThe patch data has been copied to your clipboard.`);
-     }).catch(() => {
-        alert("Failed to copy data. Check console.");
+    // Safe clipboard copy
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(dataStr).then(() => {
+            const stats = [];
+            if (changes.modified.length) stats.push(`${changes.modified.length} Modified`);
+            if (changes.added.length) stats.push(`${changes.added.length} Added`);
+            if (changes.deleted.length) stats.push(`${changes.deleted.length} Deleted`);
+            
+            alert(`Export Successful!\n\nChanges Detected: ${stats.join(', ')}\n\nThe patch data has been copied to your clipboard.`);
+        }).catch((err) => {
+            console.error(err);
+            alert("Failed to copy automatically. Data logged to console.");
+            console.log(dataStr);
+        });
+    } else {
+        alert("Clipboard access not available. Data logged to console.");
         console.log(dataStr);
-     });
+    }
   };
 
   if (!isOpen) return null;
 
   // Determine Button Appearance
-  let buttonContent = "Google Login";
+  let buttonContent = t.adminPanel;
   let buttonClass = "bg-blue-600 hover:bg-blue-700";
   
   if (showDisabledMsg) {
-      buttonContent = "Developer Mode Disabled";
+      buttonContent = t.devDisabled;
       buttonClass = "bg-slate-500 cursor-default";
   } else if (devMode) {
-      buttonContent = "Developer Mode Enabled (Hold 3s to Disable)";
+      buttonContent = t.devEnabled;
       buttonClass = "bg-green-600 hover:bg-green-700 active:bg-green-800 cursor-pointer select-none";
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col animate-in slide-in-from-right duration-300">
-      {/* Header */}
-      <div className="flex-none bg-saffron-500 text-white p-4 flex items-center gap-4 shadow-md">
-        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full">
+      {/* Header - added pt for safe area */}
+      <div className="flex-none bg-saffron-500 text-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center gap-4 shadow-md">
+        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full" type="button">
           <X className="w-6 h-6" />
         </button>
-        <h2 className="text-xl font-bold">Settings</h2>
+        <h2 className="text-xl font-bold">{t.title}</h2>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 relative">
+      {/* Content - added pb for safe area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 relative pb-[calc(2rem+env(safe-area-inset-bottom))]">
         
         {/* Font Size Section */}
         <section>
-          <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-4 px-2">Font Size of the Songs</h3>
+          <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-4 px-2">{t.fontSize}</h3>
           <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
                <span className="text-sm text-slate-500 dark:text-slate-400">12px</span>
@@ -251,35 +308,35 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
         </section>
 
-        {/* Language Section */}
+        {/* Song Language Section */}
         <section>
-          <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">Language / भाषा</h3>
+          <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.contentLang}</h3>
           <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
-            <RadioItem 
-              label="English" 
-              checked={script === 'iast'} 
-              onChange={() => onScriptChange('iast')} 
-            />
             <RadioItem 
               label="हिन्दी" 
               checked={script === 'devanagari'} 
               onChange={() => onScriptChange('devanagari')} 
+            />
+            <RadioItem 
+              label="English" 
+              checked={script === 'iast'} 
+              onChange={() => onScriptChange('iast')} 
             />
           </div>
         </section>
 
         {/* Theme Section */}
         <section>
-           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">Theme of the App</h3>
+           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.theme}</h3>
            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
               <RadioItem 
-                 label="Light Mode (Gauranga)" 
+                 label={t.themeLight}
                  checked={!darkMode} 
                  onChange={() => onThemeChange(false)} 
                  icon={<Sun className="w-4 h-4 text-orange-500" />}
               />
               <RadioItem 
-                 label="Dark Mode (Shyam)" 
+                 label={t.themeDark}
                  checked={darkMode} 
                  onChange={() => onThemeChange(true)}
                  icon={<Moon className="w-4 h-4 text-blue-400" />}
@@ -289,39 +346,67 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
         {/* Other Settings */}
         <section>
-           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">Other Settings</h3>
+           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.other}</h3>
            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
              <CheckboxItem 
-                label="Keep the song screen awake" 
+                label={t.keepAwake} 
                 checked={keepAwake} 
                 onChange={() => onKeepAwakeChange(!keepAwake)}
              />
-             <CheckboxItem label="" checked={false} />
-             <CheckboxItem label="" checked={true} />
+           </div>
+        </section>
+
+         {/* Feedback Section */}
+         <section>
+            <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.feedback}</h3>
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm">
+                <button 
+                    type="button"
+                    onClick={handleFeedback}
+                    className="w-full flex items-center gap-3 p-4 hover:bg-saffron-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-200 font-medium"
+                >
+                    <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center border border-green-200 dark:border-green-800">
+                        <MessageCircle size={18} />
+                    </div>
+                    <span>{t.sendFeedback}</span>
+                </button>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-3 px-2 leading-relaxed">
+              {t.workInProgress}
+            </p>
+         </section>
+
+         {/* Settings Language Section */}
+         <section>
+           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.settingsLang}</h3>
+           <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
+              <RadioItem 
+                 label="हिन्दी"
+                 checked={settingsLanguage === 'hi'} 
+                 onChange={() => onSettingsLanguageChange('hi')}
+                 icon={<Languages className="w-4 h-4 text-slate-500" />}
+              />
+              <RadioItem 
+                 label="English"
+                 checked={settingsLanguage === 'en'} 
+                 onChange={() => onSettingsLanguageChange('en')}
+                 icon={<Languages className="w-4 h-4 text-slate-500" />}
+              />
            </div>
         </section>
 
          {/* Backup */}
          <section>
-           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">Backup: Bookmarks & History</h3>
+           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.devOptions}</h3>
            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-center">
               
               <button 
-                onClick={devMode ? undefined : handleSecretClick}
-                onMouseDown={devMode ? handlePressStart : undefined}
-                onMouseUp={devMode ? handlePressEnd : undefined}
-                onMouseLeave={devMode ? handlePressEnd : undefined}
-                onTouchStart={devMode ? handlePressStart : undefined}
-                onTouchEnd={devMode ? handlePressEnd : undefined}
+                type="button"
+                onClick={handleSecretClick}
                 className={`font-medium py-2 px-6 rounded shadow-sm transition-all w-full mb-2 text-white ${buttonClass}`}
               >
                  {buttonContent}
               </button>
-
-              <div className="flex gap-2">
-                 <button className="flex-1 bg-saffron-500 text-white font-medium py-2 rounded shadow-sm hover:bg-saffron-600 transition-colors opacity-50 cursor-default"></button>
-                 <button className="flex-1 bg-saffron-500 text-white font-medium py-2 rounded shadow-sm hover:bg-saffron-600 transition-colors opacity-50 cursor-default"></button>
-              </div>
            </div>
         </section>
 
@@ -330,43 +415,47 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 rounded-xl p-4">
                <div className="flex items-center justify-between mb-2">
                  <h3 className="text-red-600 dark:text-red-400 font-bold flex items-center gap-2">
-                   <Database size={18} /> Developer Options
+                   <Database size={18} /> {t.devSectionTitle}
                  </h3>
                </div>
                
                <p className="text-xs text-red-500 dark:text-red-300 mb-4">
-                 You can now Add, Edit and Delete songs. Changes are saved locally.
+                 {t.devSectionDesc}
                </p>
 
                <div className="space-y-2">
                  <button 
+                   type="button"
                    onClick={onAddBhajan}
                    className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-2 rounded-lg font-medium hover:bg-red-700 active:bg-red-800 transition-colors"
                  >
-                   <Plus size={18} /> Add New Bhajan
+                   <Plus size={18} /> {t.addBhajan}
                  </button>
 
                  <button 
+                   type="button"
                    onClick={handleExportChanges}
                    className="w-full flex items-center justify-center gap-2 bg-slate-700 text-white py-2 rounded-lg font-medium hover:bg-slate-800 active:bg-slate-900 transition-colors"
                  >
-                   <Copy size={18} /> Export Changes Only
+                   <Copy size={18} /> {t.exportChanges}
                  </button>
 
                  {onRestoreDeleted && (
                     <button 
+                    type="button"
                     onClick={onRestoreDeleted}
                     className="w-full flex items-center justify-center gap-2 bg-saffron-600 text-white py-2 rounded-lg font-medium hover:bg-saffron-700 active:bg-saffron-800 transition-colors"
                     >
-                    <RefreshCcw size={18} /> Restore Deleted Songs
+                    <RefreshCcw size={18} /> {t.restoreSongs}
                     </button>
                  )}
 
                  <button 
+                   type="button"
                    onClick={onResetData}
                    className="w-full flex items-center justify-center gap-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 py-2 rounded-lg font-medium hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors"
                  >
-                   <RotateCcw size={18} /> Reset to Factory Data
+                   <RotateCcw size={18} /> {t.resetFactory}
                  </button>
                </div>
              </div>
@@ -383,7 +472,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     <Lock className="w-8 h-8" />
                 </div>
                 <h3 className="text-lg font-bold text-center mb-4 text-slate-800 dark:text-white">
-                    {authAction === 'ENABLE' ? 'Enter Developer Password' : 'Password to Disable'}
+                    {authAction === 'ENABLE' ? t.enterPass : t.passDisable}
                 </h3>
                 <form onSubmit={handlePasswordSubmit}>
                     <input 
@@ -402,13 +491,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                             onClick={() => { setShowPasswordModal(false); setPasswordInput(''); }}
                             className="flex-1 py-2 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         >
-                            Cancel
+                            {t.cancel}
                         </button>
                         <button 
                             type="submit"
                             className="flex-1 py-2 bg-saffron-500 hover:bg-saffron-600 text-white font-medium rounded-lg shadow-sm transition-colors"
                         >
-                            Submit
+                            {t.submit}
                         </button>
                     </div>
                 </form>
@@ -422,6 +511,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
 const RadioItem: React.FC<{ label: string; checked: boolean; onChange: () => void; icon?: React.ReactNode }> = ({ label, checked, onChange, icon }) => (
   <button 
+    type="button"
     onClick={onChange}
     className="w-full flex items-center justify-between p-4 hover:bg-saffron-50 dark:hover:bg-slate-700 transition-colors"
   >
@@ -440,6 +530,7 @@ const CheckboxItem: React.FC<{ label: string; checked: boolean; onChange?: () =>
      <span className="text-slate-700 dark:text-slate-200 font-medium min-h-[1.5rem]">{label}</span>
      {label && (
        <button 
+         type="button"
          onClick={onChange}
          className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${checked ? 'bg-saffron-500 border-saffron-500' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}
        >

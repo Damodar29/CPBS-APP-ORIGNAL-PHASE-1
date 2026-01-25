@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Music, BookUser, History } from 'lucide-react';
+import { Music, BookOpen, History } from 'lucide-react';
 import { AppTab } from '../types';
 
 interface BottomNavProps {
@@ -9,7 +10,7 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 pb-safe z-30">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 pb-[env(safe-area-inset-bottom)] z-30">
       <div className="flex items-center justify-around h-16">
         <NavButton 
           icon={<Music />} 
@@ -18,10 +19,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
           onClick={() => onTabChange('songs')} 
         />
         <NavButton 
-          icon={<BookUser />} 
-          label="Authors" 
-          active={activeTab === 'authors'} 
-          onClick={() => onTabChange('authors')} 
+          icon={<BookOpen />} 
+          label="Books" 
+          active={activeTab === 'books'} 
+          onClick={() => onTabChange('books')} 
         />
         <NavButton 
           icon={<History />} 

@@ -85,18 +85,11 @@ export const BhajanList: React.FC<BhajanListProps> = ({
   const scrollToSection = (key: string) => {
     const element = document.getElementById(`section-${key}`);
     if (element) {
-      // Offset for header
-      const headerOffset = 100;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
-      });
+      // Use block: 'start' to snap to the top of the scroll container
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  // Helper to get author string based on script
   const getAuthorName = (bhajan: Bhajan) => {
     if (!bhajan.author) return null;
     return script === 'iast' ? (bhajan.authorIAST || bhajan.author) : bhajan.author;
@@ -112,17 +105,15 @@ export const BhajanList: React.FC<BhajanListProps> = ({
     );
   }
 
-  // --- SEARCH RESULTS VIEW (Flat List) ---
+  // --- SEARCH RESULTS VIEW (Flat List, No Slider) ---
   if (searchQuery.trim()) {
     return (
-      <div className="pb-24 pt-2 px-2">
+      <div className="pt-2 px-2">
         <div className="space-y-2">
           {bhajans.map((bhajan) => {
             const displayTitle = script === 'iast' ? bhajan.titleIAST : bhajan.title;
             const matchedSnippet = getMatchingSnippet(bhajan, searchQuery, script);
-            // If we have a snippet, that means the match was primarily in the content
             const isContentMatch = !!matchedSnippet;
-            
             const subtitle = matchedSnippet || (script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine);
             const authorName = getAuthorName(bhajan);
             
@@ -138,7 +129,6 @@ export const BhajanList: React.FC<BhajanListProps> = ({
                     </h3>
                     
                     <div className="flex flex-col gap-1.5">
-                      {/* Subtitle / Snippet */}
                       <div className="flex items-start gap-2">
                           {isContentMatch && (
                               <span className="flex-none text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded mt-0.5">
@@ -150,7 +140,6 @@ export const BhajanList: React.FC<BhajanListProps> = ({
                           </p>
                       </div>
 
-                      {/* Author Tag */}
                       {authorName && (
                         <div className="flex">
                            <span className="text-[11px] text-saffron-700 dark:text-saffron-300 font-semibold bg-saffron-50 dark:bg-saffron-900/30 px-2 py-0.5 rounded-md border border-saffron-100 dark:border-saffron-900/50">
@@ -173,12 +162,12 @@ export const BhajanList: React.FC<BhajanListProps> = ({
     );
   }
 
-  // --- DEFAULT ALPHABETICAL VIEW ---
+  // --- DEFAULT GROUPED VIEW (With Slider) ---
   return (
-    <div className="pb-24 relative">
+    <div className="relative">
       <div className="px-0 sm:px-2">
         {sortedKeys.map((key) => (
-          <div key={key} id={`section-${key}`} className="mb-2">
+          <div key={key} id={`section-${key}`} className="mb-2 scroll-mt-20"> 
             {/* Sticky Section Header */}
             <div className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-2 border-y border-slate-200 dark:border-slate-800 text-saffron-600 dark:text-saffron-400 text-sm font-black font-sans shadow-sm flex items-center">
               <span className="bg-saffron-100 dark:bg-slate-800 w-8 h-8 flex items-center justify-center rounded-lg shadow-sm border border-saffron-200 dark:border-slate-700">
@@ -197,9 +186,9 @@ export const BhajanList: React.FC<BhajanListProps> = ({
                   <li key={bhajan.id}>
                     <button
                       onClick={() => onSelect(bhajan)}
-                      className="w-full text-left py-4 px-4 pl-5 hover:bg-saffron-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group"
+                      className="w-full text-left py-4 pl-5 pr-12 hover:bg-saffron-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group"
                     >
-                      <div className="flex-1 min-w-0 pr-6">
+                      <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-hindi font-medium text-slate-800 dark:text-slate-200 truncate leading-snug mb-1 group-hover:text-saffron-700 dark:group-hover:text-saffron-400 transition-colors">
                           {displayTitle}
                         </h3>

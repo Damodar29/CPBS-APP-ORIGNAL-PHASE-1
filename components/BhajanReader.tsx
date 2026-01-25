@@ -110,10 +110,18 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
 
   const handleCopy = () => {
       const textToCopy = `${displayTitle}\n\n${displayContent}`;
-      navigator.clipboard.writeText(textToCopy).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-      });
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+          }).catch(err => {
+              console.warn('Copy failed', err);
+              // Fallback or just ignore if clipboard access denied
+          });
+      } else {
+          // Fallback logic for older browsers or insecure context if needed, or just warn
+          alert("Clipboard access not supported in this environment");
+      }
   };
 
   const displayTitle = isEditing ? editedTitle : (script === 'iast' ? bhajan.titleIAST : bhajan.title);
@@ -122,7 +130,7 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
   return (
     <div className="fixed inset-0 bg-saffron-50 dark:bg-slate-950 z-50 flex flex-col h-full w-full animate-in slide-in-from-bottom duration-300">
       {/* Reader Header */}
-      <div className="flex-none bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm border-b border-saffron-100 dark:border-slate-800 p-2 flex items-center justify-between z-10">
+      <div className="flex-none bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm border-b border-saffron-100 dark:border-slate-800 p-2 flex items-center justify-between z-10 pt-[env(safe-area-inset-top)]">
         <button 
           onClick={onBack}
           className="p-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -201,7 +209,7 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
       </div>
 
       {/* Reader Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto p-4 pb-32 scroll-smooth">
+      <div ref={contentRef} className="flex-1 overflow-y-auto p-4 pb-[calc(8rem+env(safe-area-inset-bottom))] scroll-smooth">
         {isEditing ? (
            <textarea
              value={editedContent}
