@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
-import { Search, Menu, Settings, X, History, Trash2 } from 'lucide-react';
+import { Search, Menu, Settings, X, History, Trash2, FileText, Headphones, Music } from 'lucide-react';
 import { RAW_BHAJAN_DATA } from './data/rawBhajans';
 import { BOOKS_DATA } from './data/books';
+import { LECTURES_DATA } from './data/lectures';
 import { parseRawBhajanText, calculateSearchScore, getMatchingSnippet, convertToIAST, smartNormalize, transliterateForSearch, isFuzzyMatch } from './utils/textProcessor';
-import { Bhajan, FontSize, ScriptType, AppTab } from './types';
+import { Bhajan, FontSize, ScriptType, AppTab, LectureData, Book, HistoryEntry } from './types';
 import { BhajanList } from './components/BhajanList';
 import { BhajanReader } from './components/BhajanReader';
 import { HighlightText } from './components/HighlightText';
@@ -16,6 +17,7 @@ import { DonateScreen } from './components/DonateScreen';
 import { BottomNav } from './components/BottomNav';
 import { BookList } from './components/BookList';
 import { DownloadedList } from './components/DownloadedList';
+import { LectureList } from './components/LectureList';
 
 // Increment this version when logic changes to force client update
 const DATA_VERSION = '10';
@@ -64,12 +66,19 @@ export const App: React.FC = () => {
   const [devMode, setDevMode] = useState<boolean>(false);
 
   // Sorting State
-  // Default to 'devanagari' every time app opens (do not read from localStorage for init)
   const [indexMode, setIndexMode] = useState<'latin' | 'devanagari'>('devanagari');
 
-  const [historyIds, setHistoryIds] = useState<string[]>(() => {
+  // History State - Migrated to Object Array
+  const [historyItems, setHistoryItems] = useState<HistoryEntry[]>(() => {
      try {
-       return JSON.parse(localStorage.getItem('cpbs_history') || '[]');
+       const stored = JSON.parse(localStorage.getItem('cpbs_history') || '[]');
+       if (Array.isArray(stored) && stored.length > 0) {
+           // Migration: If old format (string array), convert to objects
+           if (typeof stored[0] === 'string') {
+               return stored.map((id: string) => ({ id, type: 'song' }));
+           }
+       }
+       return stored;
      } catch { return []; }
   });
 
@@ -82,7 +91,6 @@ export const App: React.FC = () => {
 
   // --- ANDROID BACK BUTTON HANDLING (HISTORY API) ---
   
-  // We use a ref to track current state inside the event listener to avoid stale closures
   const stateRef = useRef({ 
     hasSelectedBhajan: !!selectedBhajan, 
     isSettingsOpen, 
@@ -93,7 +101,6 @@ export const App: React.FC = () => {
     isDownloadedTab: activeTab === 'downloaded'
   });
 
-  // Sync ref with state
   useEffect(() => {
     stateRef.current = { 
       hasSelectedBhajan: !!selectedBhajan, 
@@ -107,7 +114,6 @@ export const App: React.FC = () => {
   }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab]);
 
   useEffect(() => {
-    // On mount, replace state to ensure we have a clean slate to go back to
     try {
         window.history.replaceState({ view: 'root' }, '');
     } catch (e) {
@@ -115,7 +121,6 @@ export const App: React.FC = () => {
     }
 
     const handlePopState = (event: PopStateEvent) => {
-      // Logic: If any overlay is open, the 'back' action (popstate) should close it.
       try {
           const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab } = stateRef.current;
 
@@ -147,7 +152,6 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Helper to push state when opening a view
   const openView = (viewName: string) => {
     try {
         window.history.pushState({ view: viewName }, '', `#${viewName}`);
@@ -156,20 +160,16 @@ export const App: React.FC = () => {
     }
   };
 
-  // Helper to go back (used by UI buttons to trigger the same logic as Hardware Back)
   const goBack = useCallback(() => {
-    // 1. Try to use History API
     try {
         window.history.back();
     } catch (e) {
         console.warn('History back failed', e);
     }
 
-    // 2. SAFETY FALLBACK:
     setTimeout(() => {
         const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab } = stateRef.current;
         
-        // Explicitly close top-most layer if it's still open
         if (hasSelectedBhajan) setSelectedBhajan(null);
         else if (isDonateOpen) setIsDonateOpen(false);
         else if (isSettingsOpen) setIsSettingsOpen(false);
@@ -186,17 +186,57 @@ export const App: React.FC = () => {
     }, 100);
   }, []);
 
-  // --- WRAPPERS FOR UI ACTIONS ---
+  // --- ACTIONS ---
+
+  const addToHistory = (id: string, type: 'song' | 'book' | 'lecture') => {
+    setHistoryItems(prev => {
+      // Remove existing entry of same id/type
+      const filtered = prev.filter(item => !(item.id === id && item.type === type));
+      const newEntry: HistoryEntry = { id, type, timestamp: Date.now() };
+      return [newEntry, ...filtered].slice(0, 50);
+    });
+  };
 
   const handleOpenReader = (bhajan: Bhajan) => {
     if (mainScrollRef.current) {
         scrollPositionRef.current = mainScrollRef.current.scrollTop;
     }
-    addToHistory(bhajan.id);
+    addToHistory(bhajan.id, 'song');
     setSelectedBhajan(bhajan);
     setIsNewBhajan(false);
     setIsSearchFocused(false);
     openView('reader');
+  };
+
+  const handleOpenLecture = (lecture: LectureData) => {
+      addToHistory(lecture.id, 'lecture');
+      const lectureAsBhajan: Bhajan = {
+          id: lecture.id,
+          title: lecture.title,
+          titleIAST: lecture.title,
+          firstLine: lecture.description.substring(0, 30),
+          firstLineIAST: lecture.description.substring(0, 30),
+          content: lecture.description,
+          contentIAST: lecture.description,
+          searchIndex: '',
+          searchTokens: [],
+          audio: lecture.audio,
+          author: lecture.date ? `Date: ${lecture.date}` : undefined,
+          authorIAST: lecture.date ? `Date: ${lecture.date}` : undefined,
+      };
+      
+      setSelectedBhajan(lectureAsBhajan);
+      setIsNewBhajan(false);
+      openView('reader');
+  };
+
+  const handleOpenBook = (book: Book) => {
+      addToHistory(book.id, 'book');
+      if (book.url) {
+          window.open(book.url, '_blank');
+      } else {
+          alert(`Opening ${book.title}...\n\n(No URL configured)`);
+      }
   };
 
   const handleOpenSettings = () => {
@@ -224,7 +264,6 @@ export const App: React.FC = () => {
   const handleOpenDownloaded = () => {
     setIsSideMenuOpen(false);
     setActiveTab('downloaded');
-    // Scroll to top of downloaded list
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
   };
 
@@ -242,7 +281,6 @@ export const App: React.FC = () => {
 
   // --- EFFECTS ---
   
-  // Debounce Search
   useEffect(() => {
       const handler = setTimeout(() => {
           setDebouncedQuery(searchQuery);
@@ -250,7 +288,6 @@ export const App: React.FC = () => {
       return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Initialization
   useEffect(() => {
     const startTime = Date.now();
     const savedVersion = localStorage.getItem('cpbs_data_version');
@@ -303,7 +340,7 @@ export const App: React.FC = () => {
   useEffect(() => localStorage.setItem('cpbs_fontsize', fontSize.toString()), [fontSize]);
   useEffect(() => localStorage.setItem('cpbs_script', script), [script]);
   useEffect(() => localStorage.setItem('cpbs_index_mode', indexMode), [indexMode]);
-  useEffect(() => localStorage.setItem('cpbs_history', JSON.stringify(historyIds)), [historyIds]);
+  useEffect(() => localStorage.setItem('cpbs_history', JSON.stringify(historyItems)), [historyItems]);
   useEffect(() => localStorage.setItem('cpbs_awake', String(keepAwake)), [keepAwake]);
   useEffect(() => localStorage.setItem('cpbs_settings_lang', settingsLanguage), [settingsLanguage]);
 
@@ -317,7 +354,6 @@ export const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Restore Scroll Position when returning from Reader
   useLayoutEffect(() => {
     if (!selectedBhajan && scrollPositionRef.current > 0 && mainScrollRef.current) {
        mainScrollRef.current.scrollTop = scrollPositionRef.current;
@@ -339,8 +375,6 @@ export const App: React.FC = () => {
         const combinedText = `${newTitle} ${newContent}`;
         const transliteratedText = transliterateForSearch(combinedText);
         const normalizedIndex = smartNormalize(transliteratedText);
-        // Note: Custom bhajans might not have a songNumber unless we parse it from title, 
-        // but typically user just types title. We can check if newTitle starts with number.
         const numberMatch = newTitle.trim().match(/^(\d+)[\s\.\-\)]/);
         const songNumber = numberMatch ? numberMatch[1] : b.songNumber;
 
@@ -385,7 +419,6 @@ export const App: React.FC = () => {
     if (window.confirm("Are you sure you want to delete this bhajan?")) {
        const filtered = bhajans.filter(b => b.id !== id);
        saveToStorage(filtered);
-       // Go back automatically after delete
        goBack(); 
     }
   };
@@ -414,40 +447,25 @@ export const App: React.FC = () => {
 
   const handleClearHistory = () => {
     if (window.confirm("Clear all history?")) {
-      setHistoryIds([]);
+      setHistoryItems([]);
     }
   };
 
   // --- FILTERING LOGIC ---
 
-  const addToHistory = (id: string) => {
-    setHistoryIds(prev => {
-      const newHistory = [id, ...prev.filter(hId => hId !== id)].slice(0, 50);
-      return newHistory;
-    });
-  };
-
   const filteredBhajans = useMemo(() => {
     if (!debouncedQuery.trim()) return bhajans;
     
-    // Map to objects with score
     const scored = bhajans.map(b => ({
         bhajan: b,
         score: calculateSearchScore(b, debouncedQuery, script)
     }));
 
-    // Filter out zero scores
     const matches = scored.filter(item => item.score > 0);
-
-    // Sort by Score Descending
     matches.sort((a, b) => b.score - a.score);
 
     return matches.map(m => m.bhajan);
   }, [bhajans, debouncedQuery, script]);
-
-  const historyBhajans = useMemo(() => {
-    return historyIds.map(id => bhajans.find(b => b.id === id)).filter(Boolean) as Bhajan[];
-  }, [historyIds, bhajans]);
 
   const suggestions = useMemo(() => {
     if (!searchQuery.trim() || !isSearchFocused) return [];
@@ -532,10 +550,8 @@ export const App: React.FC = () => {
       )}
 
       {/* --- FIXED HEADER --- */}
-      {/* Force orange background even in dark mode */}
       <header className="fixed top-0 left-0 right-0 z-30 bg-saffron-500 shadow-md transition-all duration-300 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2 p-2 h-16 max-w-3xl mx-auto">
-           {/* White buttons since header is always orange */}
            <button onClick={handleOpenMenu} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0">
               <Menu className="w-6 h-6" />
            </button>
@@ -562,7 +578,6 @@ export const App: React.FC = () => {
                  )}
               </div>
 
-              {/* Suggestions Dropdown */}
               {isSearchFocused && searchQuery && suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden border border-slate-100 dark:border-slate-700 animate-fade-in-up">
                   <ul>
@@ -621,15 +636,22 @@ export const App: React.FC = () => {
          )}
 
          {activeTab === 'books' && (
-            <BookList books={BOOKS_DATA} />
+            <BookList books={BOOKS_DATA} onSelect={handleOpenBook} />
+         )}
+
+         {activeTab === 'lectures' && (
+            <LectureList 
+               lectures={LECTURES_DATA} 
+               onSelect={handleOpenLecture}
+            />
          )}
 
          {activeTab === 'history' && (
             <div className="min-h-full bg-white dark:bg-slate-900">
-               {historyBhajans.length === 0 ? (
+               {historyItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-slate-400">
                      <History size={48} strokeWidth={1} className="mb-4 opacity-50" />
-                     <p>No recently viewed songs</p>
+                     <p>No recently viewed items</p>
                   </div>
                ) : (
                   <>
@@ -643,21 +665,80 @@ export const App: React.FC = () => {
                         </button>
                      </div>
                      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {historyBhajans.map(bhajan => (
-                           <li key={bhajan.id}>
-                              <button
-                                 onClick={() => handleOpenReader(bhajan)}
-                                 className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors"
-                              >
-                                 <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight">
-                                    {script === 'iast' ? bhajan.titleIAST : bhajan.title}
-                                 </div>
-                                 <div className="text-sm text-slate-500 mt-1 truncate font-hindi">
-                                    {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
-                                 </div>
-                              </button>
-                           </li>
-                        ))}
+                        {historyItems.map((item, idx) => {
+                           // Render Item based on type
+                           if (item.type === 'song') {
+                               const bhajan = bhajans.find(b => b.id === item.id);
+                               if (!bhajan) return null;
+                               return (
+                                   <li key={`${item.type}-${item.id}-${idx}`}>
+                                      <button
+                                         onClick={() => handleOpenReader(bhajan)}
+                                         className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                                      >
+                                         <div className="shrink-0 w-10 h-10 rounded-full bg-saffron-100 dark:bg-saffron-900/20 flex items-center justify-center text-saffron-600 dark:text-saffron-400">
+                                            <Music size={18} />
+                                         </div>
+                                         <div className="min-w-0 flex-1">
+                                            <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
+                                                {script === 'iast' ? bhajan.titleIAST : bhajan.title}
+                                            </div>
+                                            <div className="text-sm text-slate-500 mt-1 truncate font-hindi">
+                                                {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
+                                            </div>
+                                         </div>
+                                      </button>
+                                   </li>
+                               );
+                           } else if (item.type === 'book') {
+                               const book = BOOKS_DATA.find(b => b.id === item.id);
+                               if (!book) return null;
+                               return (
+                                   <li key={`${item.type}-${item.id}-${idx}`}>
+                                      <button
+                                         onClick={() => handleOpenBook(book)}
+                                         className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                                      >
+                                         <div className="shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                            <FileText size={18} />
+                                         </div>
+                                         <div className="min-w-0 flex-1">
+                                            <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
+                                                {book.title}
+                                            </div>
+                                            <div className="text-sm text-slate-500 mt-1 truncate">
+                                                PDF • {book.fileName}
+                                            </div>
+                                         </div>
+                                      </button>
+                                   </li>
+                               );
+                           } else if (item.type === 'lecture') {
+                               const lecture = LECTURES_DATA.find(l => l.id === item.id);
+                               if (!lecture) return null;
+                               return (
+                                   <li key={`${item.type}-${item.id}-${idx}`}>
+                                      <button
+                                         onClick={() => handleOpenLecture(lecture)}
+                                         className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                                      >
+                                         <div className="shrink-0 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                            <Headphones size={18} />
+                                         </div>
+                                         <div className="min-w-0 flex-1">
+                                            <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
+                                                {lecture.title}
+                                            </div>
+                                            <div className="text-sm text-slate-500 mt-1 truncate">
+                                                Lecture {lecture.date ? `• ${lecture.date}` : ''}
+                                            </div>
+                                         </div>
+                                      </button>
+                                   </li>
+                               );
+                           }
+                           return null;
+                        })}
                      </ul>
                   </>
                )}

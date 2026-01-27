@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Music, BookOpen, History } from 'lucide-react';
+import { Music, BookOpen, History, Mic2 } from 'lucide-react';
 import { AppTab } from '../types';
 
 interface BottomNavProps {
@@ -23,6 +23,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
           label="Books" 
           active={activeTab === 'books'} 
           onClick={() => onTabChange('books')} 
+        />
+        <NavButton 
+          icon={<Mic2 />} 
+          label="Lectures" 
+          active={activeTab === 'lectures'} 
+          onClick={() => onTabChange('lectures')} 
         />
         <NavButton 
           icon={<History />} 

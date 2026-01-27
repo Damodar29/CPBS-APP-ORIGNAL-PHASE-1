@@ -5,18 +5,11 @@ import { FileText, Download, ExternalLink } from 'lucide-react';
 
 interface BookListProps {
   books: Book[];
+  onSelect: (book: Book) => void;
 }
 
-export const BookList: React.FC<BookListProps> = ({ books }) => {
+export const BookList: React.FC<BookListProps> = ({ books, onSelect }) => {
   
-  const handleBookClick = (book: Book) => {
-    if (book.url) {
-        window.open(book.url, '_blank');
-    } else {
-        alert(`Opening ${book.title}...\n\n(Note: To enable PDF viewing, please update data/books.ts with valid Google Drive or hosting URLs for these files.)`);
-    }
-  };
-
   return (
     <div className="pb-24 pt-2 px-2">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
@@ -34,7 +27,7 @@ export const BookList: React.FC<BookListProps> = ({ books }) => {
             {books.map((book) => (
                 <li key={book.id}>
                     <button 
-                        onClick={() => handleBookClick(book)}
+                        onClick={() => onSelect(book)}
                         className="w-full text-left p-4 hover:bg-saffron-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-4 group"
                     >
                         <div className="w-10 h-10 rounded-lg bg-saffron-100 dark:bg-saffron-900/20 text-saffron-600 dark:text-saffron-400 flex items-center justify-center shrink-0 border border-saffron-200 dark:border-saffron-900/30">

@@ -28,9 +28,23 @@ export interface Book {
   url?: string; // Optional URL for online viewing
 }
 
+export interface LectureData {
+  id: string;
+  title: string;
+  description: string; // Used as content
+  date?: string;
+  audio?: BhajanAudio[];
+}
+
+export interface HistoryEntry {
+  id: string;
+  type: 'song' | 'book' | 'lecture';
+  timestamp?: number;
+}
+
 export type FontSize = number;
 export type ScriptType = 'devanagari' | 'iast';
-export type AppTab = 'songs' | 'books' | 'history' | 'downloaded';
+export type AppTab = 'songs' | 'books' | 'history' | 'downloaded' | 'lectures';
 
 export interface AppSettings {
   darkMode: boolean;
