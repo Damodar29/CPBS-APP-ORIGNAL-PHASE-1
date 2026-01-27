@@ -308,21 +308,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
         </section>
 
-        {/* Song Language Section */}
+        {/* Settings Language Section */}
         <section>
-          <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.contentLang}</h3>
-          <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
-            <RadioItem 
-              label="हिन्दी" 
-              checked={script === 'devanagari'} 
-              onChange={() => onScriptChange('devanagari')} 
-            />
-            <RadioItem 
-              label="English" 
-              checked={script === 'iast'} 
-              onChange={() => onScriptChange('iast')} 
-            />
-          </div>
+           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.settingsLang}</h3>
+           <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
+              <RadioItem 
+                 label="हिन्दी"
+                 checked={settingsLanguage === 'hi'} 
+                 onChange={() => onSettingsLanguageChange('hi')}
+                 icon={<Languages className="w-4 h-4 text-slate-500" />}
+              />
+              <RadioItem 
+                 label="English"
+                 checked={settingsLanguage === 'en'} 
+                 onChange={() => onSettingsLanguageChange('en')}
+                 icon={<Languages className="w-4 h-4 text-slate-500" />}
+              />
+           </div>
         </section>
 
         {/* Theme Section */}
@@ -376,23 +378,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </p>
          </section>
 
-         {/* Settings Language Section */}
-         <section>
-           <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.settingsLang}</h3>
-           <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
-              <RadioItem 
-                 label="हिन्दी"
-                 checked={settingsLanguage === 'hi'} 
-                 onChange={() => onSettingsLanguageChange('hi')}
-                 icon={<Languages className="w-4 h-4 text-slate-500" />}
-              />
-              <RadioItem 
-                 label="English"
-                 checked={settingsLanguage === 'en'} 
-                 onChange={() => onSettingsLanguageChange('en')}
-                 icon={<Languages className="w-4 h-4 text-slate-500" />}
-              />
-           </div>
+        {/* Song Language Section (Moved to Bottom) */}
+        <section>
+          <h3 className="text-saffron-600 dark:text-saffron-400 font-semibold mb-2 px-2">{t.contentLang}</h3>
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
+            <RadioItem 
+              label="हिन्दी" 
+              checked={script === 'devanagari'} 
+              onChange={() => onScriptChange('devanagari')} 
+            />
+            <RadioItem 
+              label="English" 
+              checked={script === 'iast'} 
+              onChange={() => onScriptChange('iast')} 
+            />
+          </div>
         </section>
 
          {/* Backup */}
