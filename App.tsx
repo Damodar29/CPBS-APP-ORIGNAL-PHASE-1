@@ -15,9 +15,10 @@ import { AboutScreen } from './components/AboutScreen';
 import { DonateScreen } from './components/DonateScreen';
 import { BottomNav } from './components/BottomNav';
 import { BookList } from './components/BookList';
+import { DownloadedList } from './components/DownloadedList';
 
 // Increment this version when logic changes to force client update
-const DATA_VERSION = '9';
+const DATA_VERSION = '10';
 
 export const App: React.FC = () => {
   // --- STATE ---
@@ -88,7 +89,8 @@ export const App: React.FC = () => {
     isAboutOpen,
     isDonateOpen,
     isSideMenuOpen,
-    isSearchFocused
+    isSearchFocused,
+    isDownloadedTab: activeTab === 'downloaded'
   });
 
   // Sync ref with state
@@ -99,9 +101,10 @@ export const App: React.FC = () => {
       isAboutOpen,
       isDonateOpen,
       isSideMenuOpen,
-      isSearchFocused
+      isSearchFocused,
+      isDownloadedTab: activeTab === 'downloaded'
     };
-  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused]);
+  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab]);
 
   useEffect(() => {
     // On mount, replace state to ensure we have a clean slate to go back to
@@ -113,9 +116,8 @@ export const App: React.FC = () => {
 
     const handlePopState = (event: PopStateEvent) => {
       // Logic: If any overlay is open, the 'back' action (popstate) should close it.
-      // We check our Ref to see what is open and close it.
       try {
-          const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused } = stateRef.current;
+          const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab } = stateRef.current;
 
           if (hasSelectedBhajan) {
             setSelectedBhajan(null);
@@ -133,6 +135,8 @@ export const App: React.FC = () => {
             if (document.activeElement instanceof HTMLElement) {
               document.activeElement.blur();
             }
+          } else if (isDownloadedTab) {
+             setActiveTab('songs');
           }
       } catch (e) {
           console.error("Error in popstate handler", e);
@@ -162,10 +166,8 @@ export const App: React.FC = () => {
     }
 
     // 2. SAFETY FALLBACK:
-    // If popstate doesn't fire (e.g., no history entry, or delay), force the UI update after a short tick.
-    // This ensures buttons are never "dead" even if the history stack is empty.
     setTimeout(() => {
-        const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused } = stateRef.current;
+        const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab } = stateRef.current;
         
         // Explicitly close top-most layer if it's still open
         if (hasSelectedBhajan) setSelectedBhajan(null);
@@ -178,6 +180,8 @@ export const App: React.FC = () => {
             if (document.activeElement instanceof HTMLElement) {
               document.activeElement.blur();
             }
+        } else if (isDownloadedTab) {
+            setActiveTab('songs');
         }
     }, 100);
   }, []);
@@ -217,12 +221,21 @@ export const App: React.FC = () => {
     openView('menu');
   };
 
+  const handleOpenDownloaded = () => {
+    setIsSideMenuOpen(false);
+    setActiveTab('downloaded');
+    // Scroll to top of downloaded list
+    if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+  };
+
+  const handleGoHome = () => {
+    setIsSideMenuOpen(false);
+    setActiveTab('songs');
+    if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+  };
+
   const handleCreateBhajanWrapper = () => {
-    // Close settings first (logically replacing the view, or stacking)
-    // To be simple, we can just replace settings with reader in history or stack them.
-    // Stacking is safer for "Back" behavior.
     handleCreateBhajan(); 
-    // handleCreateBhajan sets selectedBhajan, so we should push history for reader
     openView('reader');
   };
 
@@ -444,15 +457,16 @@ export const App: React.FC = () => {
   if (isLoading) return <SplashScreen />;
 
   return (
-    <div className={`flex flex-col h-[100dvh] bg-slate-50 dark:bg-slate-900 ${selectedBhajan ? 'overflow-hidden' : ''}`}>
+    <div className={`flex flex-col h-[100dvh] bg-slate-50 dark:bg-slate-900 ${selectedBhajan || activeTab === 'downloaded' ? 'overflow-hidden' : ''}`}>
       
       {/* --- OVERLAYS --- */}
-      {/* Use goBack for closing to sync with hardware back button */}
       <SideMenu 
         isOpen={isSideMenuOpen} 
         onClose={goBack} 
         onOpenAbout={handleOpenAbout} 
         onOpenDonate={handleOpenDonate}
+        onHome={handleGoHome}
+        onOpenDownloaded={handleOpenDownloaded}
       />
 
       <SettingsScreen 
@@ -487,6 +501,7 @@ export const App: React.FC = () => {
          onClose={goBack}
       />
 
+      {/* Full Screen Views that cover main */}
       {selectedBhajan && (
         <BhajanReader
           bhajan={selectedBhajan}
@@ -503,6 +518,17 @@ export const App: React.FC = () => {
           onDelete={handleDeleteBhajan}
           autoEdit={isNewBhajan}
         />
+      )}
+
+      {activeTab === 'downloaded' && (
+          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900">
+              <DownloadedList 
+                  allBhajans={bhajans} 
+                  onSelect={handleOpenReader} 
+                  onBack={() => setActiveTab('songs')}
+                  script={script}
+              />
+          </div>
       )}
 
       {/* --- FIXED HEADER --- */}
@@ -579,7 +605,6 @@ export const App: React.FC = () => {
       </header>
 
       {/* --- SCROLLABLE MAIN CONTENT --- */}
-      {/* Dynamic padding using calc() to handle both fixed element height (4rem/16) and safe area */}
       <main 
         ref={mainScrollRef}
         className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto scroll-smooth pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] no-scrollbar-on-mobile"
@@ -640,7 +665,7 @@ export const App: React.FC = () => {
          )}
       </main>
 
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} onTabChange={setActiveTab} />
     </div>
   );
 };

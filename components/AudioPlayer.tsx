@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { BhajanAudio } from '../types';
-import { Play, Pause, Music, AlertCircle, Loader2, X, Check, Mic2, ChevronsUpDown } from 'lucide-react';
+import { Play, Pause, Music, AlertCircle, Loader2, X, Check, Mic2, ChevronsUpDown, RotateCcw, RotateCw, Download, WifiOff } from 'lucide-react';
+import { isTrackDownloaded, saveTrack, getCachedAudioUrl } from '../utils/audioStorage';
 
 interface AudioPlayerProps {
   audioTracks: BhajanAudio[];
@@ -11,6 +12,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
@@ -21,6 +24,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
   // Ensure we have valid tracks, otherwise default to empty
   const validTracks = audioTracks || [];
   const currentTrack = validTracks[currentTrackIndex];
+
+  // Check download status on track change
+  useEffect(() => {
+    if (currentTrack) {
+        setIsDownloaded(isTrackDownloaded(currentTrack.id));
+    }
+  }, [currentTrack]);
 
   // Reset state when tracks change
   useEffect(() => {
@@ -33,20 +43,78 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
 
   const togglePlay = async () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !currentTrack) return;
 
     try {
       if (isPlaying) {
         audio.pause();
+        setIsPlaying(false);
       } else {
         setHasError(false);
-        await audio.play();
+        
+        // Logic: 
+        // 1. If Downloaded -> Play from Cache (Offline capable)
+        // 2. If Not Downloaded -> Check Internet -> Play Online
+        
+        if (isDownloaded) {
+             const cachedUrl = await getCachedAudioUrl(currentTrack.url);
+             if (cachedUrl && audio.src !== cachedUrl) {
+                 const currentTime = audio.currentTime;
+                 audio.src = cachedUrl;
+                 audio.currentTime = currentTime;
+             }
+             await audio.play();
+             setIsPlaying(true);
+        } else {
+             if (!navigator.onLine) {
+                 alert("Turn on your internet to play this bhajan.");
+                 return;
+             }
+             // Ensure we are playing online URL
+             if (audio.src !== currentTrack.url) {
+                 audio.src = currentTrack.url;
+             }
+             await audio.play();
+             setIsPlaying(true);
+        }
       }
-      setIsPlaying(!isPlaying);
     } catch (err) {
       console.error("Playback error:", err);
       setIsPlaying(false);
     }
+  };
+
+  const handleDownload = async () => {
+      if (!currentTrack) return;
+      
+      if (!navigator.onLine) {
+          alert("Turn on your internet to download.");
+          return;
+      }
+
+      if (window.confirm(`Download "${currentTrack.singer}" version?\nIt will be saved to your device Downloads folder and available for offline play.`)) {
+          setIsDownloading(true);
+          const success = await saveTrack(currentTrack);
+          setIsDownloading(false);
+          if (success) {
+              setIsDownloaded(true);
+              alert("Download Complete!");
+          } else {
+              alert("Download Failed. Please check your connection.");
+          }
+      }
+  };
+
+  const skipForward = () => {
+      if (audioRef.current) {
+          audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
+      }
+  };
+
+  const skipBackward = () => {
+      if (audioRef.current) {
+          audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+      }
   };
 
   const handleTrackSelect = async (index: number) => {
@@ -63,6 +131,25 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
       const audio = audioRef.current;
       if (audio) {
         try {
+          // Check download status for new track
+          const track = validTracks[index];
+          const downloaded = isTrackDownloaded(track.id);
+          setIsDownloaded(downloaded);
+
+          if (!downloaded && !navigator.onLine) {
+              alert("Turn on your internet to play this bhajan.");
+              setIsLoading(false);
+              return;
+          }
+
+          if (downloaded) {
+              const url = await getCachedAudioUrl(track.url);
+              if (url) audio.src = url;
+              else audio.src = track.url; // Fallback
+          } else {
+              audio.src = track.url;
+          }
+
           audio.load();
           await audio.play();
           setIsPlaying(true);
@@ -118,33 +205,52 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
         />
       </div>
 
-      <div className="p-3 flex items-center gap-3">
-        {/* Play/Pause Button */}
-        <button 
-          onClick={togglePlay}
-          disabled={hasError}
-          className={`w-10 h-10 sm:w-12 sm:h-12 flex-none flex items-center justify-center rounded-full shadow-md transition-all active:scale-95 ${
-            hasError ? 'bg-red-100 text-red-500' : 'bg-saffron-500 text-white hover:bg-saffron-600'
-          }`}
-        >
-          {hasError ? (
-            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
-          ) : isLoading ? (
-            <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
-          ) : isPlaying ? (
-            <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
-          ) : (
-            <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current ml-1" />
-          )}
-        </button>
+      <div className="p-2 flex items-center justify-between gap-2">
+        
+        {/* Playback Controls */}
+        <div className="flex items-center gap-3">
+            {/* Skip Back */}
+            <button onClick={skipBackward} className="text-slate-500 hover:text-saffron-600 dark:text-slate-400">
+                <RotateCcw size={20} />
+            </button>
+
+            {/* Play/Pause Button */}
+            <button 
+            onClick={togglePlay}
+            disabled={hasError}
+            className={`w-10 h-10 sm:w-12 sm:h-12 flex-none flex items-center justify-center rounded-full shadow-md transition-all active:scale-95 ${
+                hasError ? 'bg-red-100 text-red-500' : 'bg-saffron-500 text-white hover:bg-saffron-600'
+            }`}
+            >
+            {hasError ? (
+                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+            ) : isLoading ? (
+                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+            ) : isPlaying ? (
+                <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+            ) : (
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current ml-1" />
+            )}
+            </button>
+
+            {/* Skip Forward */}
+            <button onClick={skipForward} className="text-slate-500 hover:text-saffron-600 dark:text-slate-400">
+                <RotateCw size={20} />
+            </button>
+        </div>
 
         {/* Track Info & Controls */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <div className="flex items-center justify-between mb-1.5">
+        <div className="flex-1 min-w-0 flex flex-col justify-center px-2">
+            <div className="flex items-center justify-between mb-1">
                <div className="flex items-center gap-2">
-                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${hasError ? 'text-red-600 bg-red-50' : 'text-saffron-600 dark:text-saffron-400 bg-saffron-50 dark:bg-slate-800'}`}>
-                     {hasError ? 'Error' : 'Playing'}
+                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${hasError ? 'text-red-600 bg-red-50' : 'text-saffron-600 dark:text-saffron-400 bg-saffron-50 dark:bg-slate-800'}`}>
+                     {hasError ? 'Error' : isPlaying ? 'Playing' : 'Paused'}
                    </span>
+                   {isDownloaded && (
+                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-green-600 bg-green-50 dark:bg-green-900/20">
+                           Offline
+                       </span>
+                   )}
                </div>
                <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
                  {formatTime(progress)} / {formatTime(duration)}
@@ -177,6 +283,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
                 </div>
             )}
         </div>
+
+        {/* Download Button */}
+        <button 
+            onClick={handleDownload} 
+            disabled={isDownloaded || isDownloading}
+            className={`p-2.5 rounded-full transition-colors ${
+                isDownloaded 
+                ? 'text-green-500 bg-green-50 dark:bg-green-900/20' 
+                : isDownloading 
+                    ? 'text-saffron-500 bg-saffron-50'
+                    : 'text-slate-400 hover:text-saffron-600 hover:bg-saffron-50 dark:hover:bg-slate-800'
+            }`}
+            title={isDownloaded ? "Downloaded" : "Download Song"}
+        >
+            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : isDownloaded ? <Check className="w-5 h-5" /> : <Download className="w-5 h-5" />}
+        </button>
+
       </div>
 
       {/* Playlist Drawer (Slide Up) */}
@@ -223,7 +346,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioTracks }) => {
 
       <audio
         ref={audioRef}
-        src={currentTrack.url}
+        src={isDownloaded ? undefined : currentTrack.url} // If downloaded, handled in effect/toggle
         crossOrigin="anonymous"
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onTimeUpdate}

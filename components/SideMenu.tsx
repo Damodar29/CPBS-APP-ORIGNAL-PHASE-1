@@ -1,15 +1,19 @@
 
 import React from 'react';
-import { X, Info, Heart, MessageCircle, Youtube, Instagram, Facebook } from 'lucide-react';
+import { X, Info, Heart, MessageCircle, Youtube, Instagram, Facebook, Home, Download } from 'lucide-react';
 
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenAbout?: () => void;
   onOpenDonate?: () => void;
+  onHome?: () => void;
+  onOpenDownloaded?: () => void;
 }
 
-export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenAbout, onOpenDonate }) => {
+export const SideMenu: React.FC<SideMenuProps> = ({ 
+  isOpen, onClose, onOpenAbout, onOpenDonate, onHome, onOpenDownloaded 
+}) => {
   const handleFeedback = () => {
     window.open('https://wa.me/917049304733', '_blank');
   };
@@ -67,7 +71,11 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenAbout
 
         {/* Menu Items */}
         <div className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {/* Donate moved to top */}
+          
+          <MenuItem icon={<Home />} label="Home" onClick={onHome} />
+          
+          <MenuItem icon={<Download />} label="Downloaded Bhajans" onClick={onOpenDownloaded} />
+
           <MenuItem icon={<Heart />} label="Donate" onClick={onOpenDonate} />
           
           <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
@@ -78,7 +86,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenAbout
           {/* Instagram */}
           <MenuItem icon={<Instagram />} label="Instagram Page" onClick={handleInstagram} />
           
-          {/* Facebook Page (Replaced Share) */}
+          {/* Facebook Page */}
           <MenuItem icon={<Facebook />} label="Facebook Page" onClick={handleFacebook} />
           
           {/* About */}
@@ -106,7 +114,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenAbout
 const MenuItem: React.FC<{ icon: React.ReactNode; label: string; subtext?: string; onClick?: () => void }> = ({ icon, label, subtext, onClick }) => (
   <button 
     onClick={onClick} 
-    className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-saffron-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors text-left group"
+    className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-saffron-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors text-left group"
   >
     <span className="text-saffron-500 group-hover:scale-110 transition-transform">{icon}</span>
     <div>

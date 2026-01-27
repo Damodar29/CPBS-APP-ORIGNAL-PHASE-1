@@ -30,7 +30,7 @@ export interface Book {
 
 export type FontSize = number;
 export type ScriptType = 'devanagari' | 'iast';
-export type AppTab = 'songs' | 'books' | 'history';
+export type AppTab = 'songs' | 'books' | 'history' | 'downloaded';
 
 export interface AppSettings {
   darkMode: boolean;
