@@ -7,6 +7,7 @@
     <title>CPBS - Bhajan Reader</title>
     <link rel="icon" type="image/png" href="icon.png" />
     <link rel="apple-touch-icon" href="icon.png" />
+    <link rel="manifest" href="manifest.json" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -50,7 +51,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      /* Custom Scrollbar for a cleaner look */
       ::-webkit-scrollbar {
         width: 6px;
       }
@@ -61,7 +61,6 @@
         background-color: rgba(156, 163, 175, 0.5);
         border-radius: 20px;
       }
-      /* Hide scrollbar for cleaner mobile look in specific areas if needed */
       .no-scrollbar::-webkit-scrollbar {
         display: none;
       }
@@ -69,19 +68,25 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+      body {
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+      }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "lucide-react": "https://esm.sh/lucide-react@0.475.0"
   }
 }
 </script>
 </head>
   <body class="bg-saffron-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
     <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
   </body>
 </html>

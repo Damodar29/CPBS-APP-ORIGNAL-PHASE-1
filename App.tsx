@@ -17,7 +17,7 @@ import { BottomNav } from './components/BottomNav';
 import { BookList } from './components/BookList';
 
 // Increment this version when logic changes to force client update
-const DATA_VERSION = '5';
+const DATA_VERSION = '9';
 
 export const App: React.FC = () => {
   // --- STATE ---
@@ -326,7 +326,12 @@ export const App: React.FC = () => {
         const combinedText = `${newTitle} ${newContent}`;
         const transliteratedText = transliterateForSearch(combinedText);
         const normalizedIndex = smartNormalize(transliteratedText);
-        const searchIndex = `${combinedText.toLowerCase()} ${normalizedIndex}`;
+        // Note: Custom bhajans might not have a songNumber unless we parse it from title, 
+        // but typically user just types title. We can check if newTitle starts with number.
+        const numberMatch = newTitle.trim().match(/^(\d+)[\s\.\-\)]/);
+        const songNumber = numberMatch ? numberMatch[1] : b.songNumber;
+
+        const searchIndex = `${songNumber || ''} ${combinedText.toLowerCase()} ${normalizedIndex}`;
         const searchTokens = Array.from(new Set(
            transliteratedText.toLowerCase().split(/[\s,।॥!?-]+/)
            .filter(t => t.length > 2)
@@ -338,7 +343,7 @@ export const App: React.FC = () => {
 
         return {
           ...b, title: newTitle, titleIAST, content: newContent, contentIAST,
-          firstLine, firstLineIAST, searchIndex, searchTokens
+          firstLine, firstLineIAST, searchIndex, searchTokens, songNumber
         };
       }
       return b;
@@ -490,7 +495,8 @@ export const App: React.FC = () => {
           onChangeFontSize={setFontSize}
           searchQuery={debouncedQuery}
           script={script}
-          onToggleScript={() => setScript(s => s === 'devanagari' ? 'iast' : 'devanagari')}
+          darkMode={darkMode}
+          onToggleTheme={() => setDarkMode(!darkMode)}
           keepAwake={keepAwake}
           devMode={devMode}
           onSave={handleUpdateBhajan}

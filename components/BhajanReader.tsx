@@ -1,8 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Bhajan, FontSize, ScriptType } from '../types';
-import { ArrowLeft, ZoomIn, ZoomOut, Edit2, Save, Trash2, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, Trash2, Copy, Check, Sun, Moon, Type, Minus, Plus, X } from 'lucide-react';
 import { HighlightText } from './HighlightText';
+import { AudioPlayer } from './AudioPlayer';
 
 interface BhajanReaderProps {
   bhajan: Bhajan;
@@ -11,7 +12,8 @@ interface BhajanReaderProps {
   onChangeFontSize: (size: FontSize) => void;
   searchQuery: string;
   script: ScriptType;
-  onToggleScript: () => void;
+  darkMode: boolean;
+  onToggleTheme: () => void;
   keepAwake: boolean;
   devMode: boolean;
   onSave?: (id: string, title: string, content: string) => void;
@@ -26,7 +28,8 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
   onChangeFontSize,
   searchQuery,
   script,
-  onToggleScript,
+  darkMode,
+  onToggleTheme,
   keepAwake,
   devMode,
   onSave,
@@ -40,12 +43,17 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
   const [editedTitle, setEditedTitle] = useState(script === 'iast' ? bhajan.titleIAST : bhajan.title);
   const [editedContent, setEditedContent] = useState(script === 'iast' ? bhajan.contentIAST : bhajan.content);
   const [copied, setCopied] = useState(false);
+  const [showSecretId, setShowSecretId] = useState(false);
+  
+  // Font Panel State
+  const [showFontPanel, setShowFontPanel] = useState(false);
 
   // Sync state when bhajan or script changes (unless editing)
   useEffect(() => {
     if (!isEditing) {
       setEditedTitle(script === 'iast' ? bhajan.titleIAST : bhajan.title);
       setEditedContent(script === 'iast' ? bhajan.contentIAST : bhajan.content);
+      setShowSecretId(false);
     }
   }, [bhajan, script, isEditing]);
 
@@ -54,7 +62,23 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
+    setShowFontPanel(false);
+    setShowSecretId(false);
   }, [bhajan]);
+
+  // Close font panel on scroll
+  useEffect(() => {
+      const handleScroll = () => {
+          if (showFontPanel) setShowFontPanel(false);
+      };
+      const el = contentRef.current;
+      if (el) {
+          el.addEventListener('scroll', handleScroll, { passive: true });
+      }
+      return () => {
+          if (el) el.removeEventListener('scroll', handleScroll);
+      };
+  }, [showFontPanel]);
 
   // --- SCREEN WAKE LOCK LOGIC ---
   useEffect(() => {
@@ -126,11 +150,12 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
 
   const displayTitle = isEditing ? editedTitle : (script === 'iast' ? bhajan.titleIAST : bhajan.title);
   const displayContent = isEditing ? editedContent : (script === 'iast' ? bhajan.contentIAST : bhajan.content);
+  const hasAudio = bhajan.audio && bhajan.audio.length > 0;
 
   return (
     <div className="fixed inset-0 bg-saffron-50 dark:bg-slate-950 z-50 flex flex-col h-full w-full animate-in slide-in-from-bottom duration-300">
       {/* Reader Header */}
-      <div className="flex-none bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm border-b border-saffron-100 dark:border-slate-800 p-2 flex items-center justify-between z-10 pt-[env(safe-area-inset-top)]">
+      <div className="flex-none bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm border-b border-saffron-100 dark:border-slate-800 p-2 flex items-center justify-between z-10 pt-[env(safe-area-inset-top)] relative">
         <button 
           onClick={onBack}
           className="p-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -186,30 +211,70 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
               </>
             )}
 
-            {/* Script Toggle */}
+            {/* Theme Toggle */}
             <button 
-              onClick={onToggleScript} 
+              onClick={onToggleTheme} 
               className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-saffron-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-200 dark:border-slate-700"
             >
-              <span className="text-xs font-bold font-sans">
-                  {script === 'devanagari' ? 'EN' : 'अ'}
-              </span>
+               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            {/* Font Controls */}
-            <div className="flex flex-col gap-0.5 ml-1">
-               <button onClick={increaseFont} disabled={fontSize >= 40} className="w-8 h-5 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-t hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-                  <ZoomIn className="w-3 h-3" />
-              </button>
-              <button onClick={decreaseFont} disabled={fontSize <= 12} className="w-8 h-5 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-b hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-                  <ZoomOut className="w-3 h-3" />
-              </button>
-            </div>
+            {/* Font Control Toggle */}
+            <button 
+               onClick={() => setShowFontPanel(!showFontPanel)}
+               className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors border ${showFontPanel ? 'bg-saffron-100 border-saffron-300 text-saffron-700 dark:bg-saffron-900/50 dark:border-saffron-700 dark:text-saffron-400' : 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-saffron-50 dark:hover:bg-slate-700'}`}
+            >
+               <Type className="w-5 h-5" />
+            </button>
         </div>
       </div>
 
+      {/* Font Settings Panel Overlay */}
+      {showFontPanel && (
+          <div className="absolute top-[calc(3.5rem+env(safe-area-inset-top))] left-0 right-0 z-30 px-4 flex justify-end animate-in slide-in-from-top-2 fade-in duration-200 pointer-events-none">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 w-full max-w-xs pointer-events-auto">
+                   <div className="flex items-center justify-between mb-4">
+                       <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Font Size</span>
+                       <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300">{fontSize}px</span>
+                   </div>
+                   
+                   <div className="flex items-center gap-3">
+                       <button 
+                           onClick={decreaseFont}
+                           disabled={fontSize <= 12}
+                           className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-saffron-100 dark:hover:bg-slate-700 hover:text-saffron-600 dark:hover:text-saffron-400 transition-colors disabled:opacity-40"
+                       >
+                           <Minus className="w-5 h-5" />
+                       </button>
+                       
+                       <input 
+                           type="range" 
+                           min="12" 
+                           max="40" 
+                           step="2" 
+                           value={fontSize}
+                           onChange={(e) => onChangeFontSize(parseInt(e.target.value))}
+                           className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-saffron-500"
+                       />
+                       
+                       <button 
+                           onClick={increaseFont}
+                           disabled={fontSize >= 40}
+                           className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-saffron-100 dark:hover:bg-slate-700 hover:text-saffron-600 dark:hover:text-saffron-400 transition-colors disabled:opacity-40"
+                       >
+                           <Plus className="w-5 h-5" />
+                       </button>
+                   </div>
+              </div>
+          </div>
+      )}
+
       {/* Reader Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto p-4 pb-[calc(8rem+env(safe-area-inset-bottom))] scroll-smooth">
+      <div 
+        ref={contentRef} 
+        className={`flex-1 overflow-y-auto p-4 scroll-smooth ${hasAudio ? 'pb-[calc(8rem+env(safe-area-inset-bottom))]' : 'pb-[calc(3rem+env(safe-area-inset-bottom))]'}`}
+        onClick={() => { if(showFontPanel) setShowFontPanel(false); }}
+      >
         {isEditing ? (
            <textarea
              value={editedContent}
@@ -222,17 +287,30 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
              className="font-hindi text-slate-800 dark:text-slate-200 whitespace-pre-wrap max-w-2xl mx-auto text-center px-1"
              style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}
            >
-             <HighlightText text={displayContent} highlight={searchQuery} />
+             {/* Disable highlighting in reader view as per user request */}
+             <HighlightText text={displayContent} highlight="" />
            </div>
         )}
         
         {!isEditing && (
-          <div className="mt-16 mb-8 text-center opacity-40">
+          <div 
+             className="mt-16 mb-8 text-center opacity-40 cursor-pointer select-none transition-opacity active:opacity-60" 
+             onClick={() => setShowSecretId(!showSecretId)}
+          >
              <div className="w-16 h-1 bg-saffron-300 dark:bg-slate-700 rounded-full mx-auto mb-2"></div>
-             <span className="text-saffron-600 dark:text-saffron-400 font-logo text-xl">Jay Gauranga</span>
+             <span className="text-saffron-600 dark:text-saffron-400 font-logo text-xl">
+                 {showSecretId ? (bhajan.songNumber ? `Song #${bhajan.songNumber}` : bhajan.id.replace('bhajan-', 'Song #')) : 'Radhe Shyam'}
+             </span>
           </div>
         )}
       </div>
+
+      {/* Fixed Audio Player Bottom Bar */}
+      {hasAudio && !isEditing && (
+          <div className="flex-none z-20">
+              <AudioPlayer audioTracks={bhajan.audio!} />
+          </div>
+      )}
     </div>
   );
 };

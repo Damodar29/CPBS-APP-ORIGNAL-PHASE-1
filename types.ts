@@ -1,4 +1,10 @@
 
+export interface BhajanAudio {
+  id: string;
+  singer: string;
+  url: string; // Direct URL (e.g., Cloudinary link ending in .mp3)
+}
+
 export interface Bhajan {
   id: string;
   title: string;
@@ -11,13 +17,15 @@ export interface Bhajan {
   searchTokens: string[]; // Array of normalized words for fuzzy matching
   author?: string; // Hindi/Devanagari Name
   authorIAST?: string; // English/IAST Name
+  audio?: BhajanAudio[]; // Array of audio tracks
+  songNumber?: string; // Extracted number from the raw text title
 }
 
 export interface Book {
   id: string;
   title: string;
   fileName: string;
-  url?: string; // Optional URL for online viewing (e.g., GDrive)
+  url?: string; // Optional URL for online viewing
 }
 
 export type FontSize = number;

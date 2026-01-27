@@ -1,5 +1,5 @@
 
-import { Bhajan, ScriptType } from '../types';
+import { Bhajan, ScriptType, BhajanAudio } from '../types';
 
 // ----------------------------------------------------------------------
 // 1. Search Normalization Maps (Devanagari -> Plain English)
@@ -295,6 +295,11 @@ const extractAuthor = (content: string): { deva: string, iast: string } | undefi
 export const calculateSearchScore = (bhajan: Bhajan, query: string, script: ScriptType): number => {
     if (!query || query.trim().length === 0) return 0;
     
+    // 0. Exact Song Number Match (Highest Priority)
+    if (bhajan.songNumber && query.trim() === bhajan.songNumber) {
+        return 2000;
+    }
+
     const rawQuery = query.toLowerCase().trim();
     const phoneticQuery = transliterateForSearch(rawQuery);
     const normalizedQuery = smartNormalize(phoneticQuery);
@@ -308,7 +313,7 @@ export const calculateSearchScore = (bhajan: Bhajan, query: string, script: Scri
     const titlePhonetic = transliterateForSearch(titleRaw);
     const titleNorm = smartNormalize(titlePhonetic);
 
-    // Exact Title Match (Highest Priority)
+    // Exact Title Match
     if (titleRaw === rawQuery || titleNorm === normalizedQuery) {
         return 1000;
     }
@@ -331,12 +336,10 @@ export const calculateSearchScore = (bhajan: Bhajan, query: string, script: Scri
     score += (titleMatches * 50);
 
     // 2. Content Analysis
-    // If we already have a strong title match, we might skip deep content analysis for performance,
-    // but to find the *best* snippet, we should check it briefly.
-    
     const content = script === 'iast' ? bhajan.contentIAST : bhajan.content;
     
-    // Quick Check: Does the content even contain the query?
+    // Quick Check: Does the content or index contain the query?
+    // Note: searchIndex now includes songNumber so partial number matches work too
     if (bhajan.searchIndex.includes(normalizedQuery) || content.toLowerCase().includes(rawQuery)) {
         score += 100; // Boost for existence in content
     }
@@ -407,6 +410,36 @@ export const getMatchingSnippet = (bhajan: Bhajan, query: string, script: Script
   return bestScore > 0 ? bestLine : null;
 };
 
+// ----------------------------------------------------------------------
+// 5. AUDIO MAP (Cloudinary Support)
+// ----------------------------------------------------------------------
+
+// You can add your audio links here. 
+// Keys can be the Song Number (e.g. '246') OR the Exact Hindi Title.
+// Mapping by number is recommended as it's more stable.
+const BHAJAN_AUDIO_MAP: Record<string, BhajanAudio[]> = {
+   // Example 1: Mapping by Song Number (Recommended)
+   '28': [
+      { 
+         id: '28-v1', 
+         singer: 'Bablu Prabhuji', 
+         url: 'https://res.cloudinary.com/drlnfmqrh/video/upload/v1769477596/3.%E0%A4%B6%E0%A5%8D%E0%A4%B0%E0%A4%B5%E0%A4%A3_%E0%A4%B8%E0%A4%95%E0%A4%B2_%E0%A4%B8%E0%A5%81%E0%A4%96%E0%A4%A6%E0%A4%BE%E0%A4%AF%E0%A4%95_%E0%A4%B9%E0%A5%87_pzo0uf.mp3' 
+      },
+      { 
+         id: '28-v2', 
+         singer: 'HH BhaktiShastriJi Maharaj', 
+         url: 'https://res.cloudinary.com/drlnfmqrh/video/upload/v1769477104/%E0%A4%B6%E0%A5%8D%E0%A4%B0%E0%A4%B5%E0%A4%A3_%E0%A4%B8%E0%A4%95%E0%A4%B2_%E0%A4%B8%E0%A5%81%E0%A4%96%E0%A4%A6%E0%A4%BE%E0%A4%AF%E0%A4%95_%E0%A4%B9%E0%A5%87_e4pl66.mp3' 
+      }
+   ],
+
+   // Example 2: Mapping by Title
+   /*
+   'श्री गुरु चरण वंदना': [
+      { id: 'g1', singer: 'Default', url: 'https://...' }
+   ]
+   */
+};
+
 export const parseRawBhajanText = (rawText: string): Bhajan[] => {
   const parts = rawText.split('###');
   const bhajans: Bhajan[] = [];
@@ -417,6 +450,11 @@ export const parseRawBhajanText = (rawText: string): Bhajan[] => {
 
     if (titlePart && contentPart !== undefined) {
         let cleanTitle = titlePart.replace(/[\u200B-\u200D\uFEFF]/g, '');
+        
+        // Extract song number if present (at start of title part)
+        const numberMatch = cleanTitle.trim().match(/^(\d+)[\s\.\-\)]/);
+        const songNumber = numberMatch ? numberMatch[1] : undefined;
+
         cleanTitle = cleanTitle.replace(/^[\s\d\u0966-\u096F\.\,\-\(\)\[\]\#\*]+/, '').trim();
         const cleanContent = contentPart.trim().replace(/बिरही/g, 'विरही');
 
@@ -429,11 +467,23 @@ export const parseRawBhajanText = (rawText: string): Bhajan[] => {
             const combinedText = `${cleanTitle} ${cleanContent}`;
             const transliteratedText = transliterateForSearch(combinedText);
             const normalizedIndex = smartNormalize(transliteratedText);
-            const searchIndex = `${combinedText.toLowerCase()} ${normalizedIndex}`;
+            
+            // Add songNumber to search index to allow partial number matching
+            const searchIndex = `${songNumber || ''} ${combinedText.toLowerCase()} ${normalizedIndex}`;
+            
             const rawTokens = transliteratedText.toLowerCase().split(/[\s,।॥!?-]+/);
             const searchTokens = rawTokens.filter(t => t.length > 2).map(t => smartNormalize(t));
             const uniqueTokens = Array.from(new Set(searchTokens));
             const authorData = extractAuthor(cleanContent);
+
+            // Check for audio mapping
+            // Priority: 1. By Song Number, 2. By Clean Title
+            let audioTracks: BhajanAudio[] | undefined = undefined;
+            if (songNumber && BHAJAN_AUDIO_MAP[songNumber]) {
+                audioTracks = BHAJAN_AUDIO_MAP[songNumber];
+            } else if (BHAJAN_AUDIO_MAP[cleanTitle]) {
+                audioTracks = BHAJAN_AUDIO_MAP[cleanTitle];
+            }
 
             bhajans.push({
                 id: `bhajan-${Math.floor(i / 2)}`,
@@ -446,7 +496,9 @@ export const parseRawBhajanText = (rawText: string): Bhajan[] => {
                 searchIndex,
                 searchTokens: uniqueTokens,
                 author: authorData?.deva,
-                authorIAST: authorData?.iast
+                authorIAST: authorData?.iast,
+                audio: audioTracks,
+                songNumber
             });
         }
     }
