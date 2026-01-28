@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ImageOff, RefreshCw, WifiOff } from 'lucide-react';
 
 interface DailyQuotesProps {
   onBack: () => void;
@@ -9,6 +9,8 @@ interface DailyQuotesProps {
 export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [imageError, setImageError] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0); // Used to force reload URL
+  const [isLoading, setIsLoading] = useState(true);
 
   // Month names in Hindi to match data keys (for display)
   const HINDI_MONTHS = [
@@ -25,27 +27,35 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
   // --- DYNAMIC IMAGE URL GENERATION ---
   const CLOUD_NAME = "drlnfmqrh";
   
-  // Calculate Day of Year (1 - 366)
-  const getDayOfYear = (date: Date) => {
-    const start = new Date(date.getFullYear(), 0, 0);
-    const diff = date.getTime() - start.getTime();
+  // Calculate Day of Year (1 - 366) based on a LEAP YEAR (e.g. 2024)
+  // This ensures March 1st is ALWAYS Day 61, preserving the 1-366 mapping across all years.
+  const getStaticDayOfYear = (date: Date) => {
+    // We map the selected date to the year 2024 (a leap year)
+    // This handles the index consistency.
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Create date object for the same day in 2024
+    const leapYearDate = new Date(2024, month, day);
+    const start = new Date(2024, 0, 0); // Dec 31, 2023
+    const diff = leapYearDate.getTime() - start.getTime();
     const oneDay = 1000 * 60 * 60 * 24;
     return Math.floor(diff / oneDay);
   };
 
   // Generates URL based on Day of Year
-  // Jan 1 (Day 1) -> 1.jpg
-  // Jan 2 (Day 2) -> 1-2.jpg
-  // Feb 1 (Day 32) -> 1-32.jpg
+  // Jan 1 -> 1.jpg
+  // Feb 29 -> 1-60.jpg
+  // Mar 1 -> 1-61.jpg (Always, even in non-leap years)
   const getQuoteImageUrl = (date: Date) => {
-    const dayOfYear = getDayOfYear(date);
+    const dayOfYear = getStaticDayOfYear(date);
     
-    // Exception for Day 1 as per user request (1.jpg instead of 1-1.jpg)
+    // Exception for Day 1 (1.jpg)
     // For all other days: 1-{DayOfYear}.jpg
     const fileName = dayOfYear === 1 ? "1.jpg" : `1-${dayOfYear}.jpg`;
     
-    // Using root upload folder based on provided links (no 'quotes/' prefix in URL)
-    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${fileName}`;
+    // Append retryTrigger to URL to bypass browser cache on retry
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${fileName}?retry=${retryTrigger}`;
   };
 
   const quoteImage = getQuoteImageUrl(currentDate);
@@ -54,12 +64,20 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + days);
     setCurrentDate(newDate);
-    setImageError(false); // Reset error state for new date
+    setImageError(false);
+    setIsLoading(true);
   };
 
   const handleToday = () => {
     setCurrentDate(new Date());
     setImageError(false);
+    setIsLoading(true);
+  };
+
+  const handleRetry = () => {
+      setIsLoading(true);
+      setImageError(false);
+      setRetryTrigger(prev => prev + 1); // Changes URL query param to force reload
   };
 
   return (
@@ -129,24 +147,45 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
                   </div>
 
                   {!imageError ? (
-                      <div className="animate-in fade-in zoom-in-95 duration-300 mb-4">
+                      <div className="relative mb-4 min-h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-lg">
+                          {isLoading && (
+                              <div className="absolute inset-0 flex items-center justify-center z-0">
+                                  <div className="w-8 h-8 border-4 border-saffron-200 border-t-saffron-500 rounded-full animate-spin"></div>
+                              </div>
+                          )}
                           <img 
                             src={quoteImage} 
                             alt={`Quote for ${formatDateKey(currentDate)}`} 
-                            className="w-full h-auto rounded-lg shadow-sm border border-slate-100 dark:border-slate-700"
-                            onError={() => setImageError(true)}
+                            className={`w-full h-auto rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 relative z-10 transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                            onLoad={() => setIsLoading(false)}
+                            onError={() => {
+                                setImageError(true);
+                                setIsLoading(false);
+                            }}
                           />
                       </div>
                   ) : (
                       <div className="py-12 text-slate-400 flex flex-col items-center justify-center">
-                          <ImageOff className="w-12 h-12 mb-3 opacity-20" />
-                          <p className="mb-2 text-lg font-medium">Quote image not found</p>
-                          <p className="text-xs opacity-70 text-center px-4 mb-2">
-                             We could not find the image for this date.
+                          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
+                             <WifiOff className="w-8 h-8 opacity-40 text-slate-500" />
+                          </div>
+                          <p className="mb-2 text-lg font-medium text-slate-600 dark:text-slate-300">Image not loaded</p>
+                          <p className="text-xs opacity-70 text-center px-8 mb-6 max-w-xs">
+                             Please check your internet connection or try again.
                           </p>
-                          <p className="text-[10px] font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-slate-500">
-                                Expected: {quoteImage.split('/').pop()}
-                          </p>
+                          
+                          <button 
+                             onClick={handleRetry}
+                             className="flex items-center gap-2 bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2 rounded-full font-bold shadow-md transition-all active:scale-95"
+                          >
+                             <RefreshCw size={18} /> Retry
+                          </button>
+
+                          <div className="mt-6">
+                            <p className="text-[10px] font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-slate-500">
+                                    File: {quoteImage.split('/').pop()?.split('?')[0]}
+                            </p>
+                          </div>
                       </div>
                   )}
               </div>
