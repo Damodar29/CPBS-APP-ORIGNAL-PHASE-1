@@ -1,36 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Copy, Share2, Check } from 'lucide-react';
-import { QUOTES_DATA } from '../data/quotes';
-import { DailyQuote } from '../types';
+import React, { useState } from 'react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 
 interface DailyQuotesProps {
   onBack: () => void;
 }
 
-// Trial images for specific dates (Format: "Date MonthIndex")
-// Month is 0-indexed (0 = Jan, 1 = Feb, etc.)
-const QUOTE_IMAGES: Record<string, string> = {
-  "28 0": "https://res.cloudinary.com/drlnfmqrh/image/upload/v1769550644/028_28_JAN_jp48nc.jpg",
-  "29 0": "https://res.cloudinary.com/drlnfmqrh/image/upload/v1769550648/029_29_JAN_jx6xli.jpg"
-};
-
 export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [quote, setQuote] = useState<DailyQuote | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  // Month names in Hindi to match data keys
+  // Month names in Hindi to match data keys (for display)
   const HINDI_MONTHS = [
     "जनवरी", "फ़रवरी", "मार्च", "अप्रैल", "मई", "जून",
     "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"
   ];
-
-  // Also support alternate spellings if necessary
-  const ALT_HINDI_MONTHS: Record<number, string[]> = {
-     1: ["फ़रवरी", "फरवरी"],
-     8: ["सितंबर", "सितम्बर"]
-  };
 
   const formatDateKey = (date: Date): string => {
     const day = date.getDate();
@@ -38,95 +22,44 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
     return `${day} ${HINDI_MONTHS[monthIndex]}`;
   };
 
-  // Check if we have an image for this date
-  const imageKey = `${currentDate.getDate()} ${currentDate.getMonth()}`;
-  const quoteImage = QUOTE_IMAGES[imageKey];
+  // --- DYNAMIC IMAGE URL GENERATION ---
+  const CLOUD_NAME = "drlnfmqrh";
+  
+  // Calculate Day of Year (1 - 366)
+  const getDayOfYear = (date: Date) => {
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = date.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    return Math.floor(diff / oneDay);
+  };
 
-  useEffect(() => {
-    const key = formatDateKey(currentDate);
-    // Try primary key
-    let foundQuote = QUOTES_DATA.find(q => q.dateKey === key);
+  // Generates URL based on Day of Year
+  // Jan 1 (Day 1) -> 1.jpg
+  // Jan 2 (Day 2) -> 1-2.jpg
+  // Feb 1 (Day 32) -> 1-32.jpg
+  const getQuoteImageUrl = (date: Date) => {
+    const dayOfYear = getDayOfYear(date);
     
-    // Try alternate spelling if not found
-    if (!foundQuote && ALT_HINDI_MONTHS[currentDate.getMonth()]) {
-         const day = currentDate.getDate();
-         const alts = ALT_HINDI_MONTHS[currentDate.getMonth()];
-         for (const altMonth of alts) {
-             const altKey = `${day} ${altMonth}`;
-             foundQuote = QUOTES_DATA.find(q => q.dateKey === altKey);
-             if (foundQuote) break;
-         }
-    }
+    // Exception for Day 1 as per user request (1.jpg instead of 1-1.jpg)
+    // For all other days: 1-{DayOfYear}.jpg
+    const fileName = dayOfYear === 1 ? "1.jpg" : `1-${dayOfYear}.jpg`;
+    
+    // Using root upload folder based on provided links (no 'quotes/' prefix in URL)
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${fileName}`;
+  };
 
-    setQuote(foundQuote || null);
-  }, [currentDate]);
+  const quoteImage = getQuoteImageUrl(currentDate);
 
   const changeDate = (days: number) => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + days);
     setCurrentDate(newDate);
+    setImageError(false); // Reset error state for new date
   };
 
   const handleToday = () => {
     setCurrentDate(new Date());
-  };
-
-  const handleCopy = () => {
-    if (quoteImage) {
-        // For images, copy the URL
-        if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            navigator.clipboard.writeText(quoteImage).then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            });
-        }
-        return;
-    }
-
-    if (!quote) return;
-    const textToCopy = `*नित्य वाणी - ${quote.dateKey}*\n\n${quote.text}\n\n${quote.source || ''}`;
-    
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        });
-    }
-  };
-
-  const handleShare = async () => {
-    if (quoteImage) {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'Daily Quote - CPBS',
-                    text: 'Check out today\'s quote!',
-                    url: quoteImage
-                });
-            } catch (err) {
-                console.log('Share canceled');
-            }
-        } else {
-            handleCopy();
-        }
-        return;
-    }
-
-    if (!quote) return;
-    const textToShare = `*नित्य वाणी - ${quote.dateKey}*\n\n${quote.text}\n\n${quote.source || ''}`;
-    
-    if (navigator.share) {
-        try {
-            await navigator.share({
-                title: 'Daily Quote - CPBS',
-                text: textToShare,
-            });
-        } catch (err) {
-            console.log('Share canceled');
-        }
-    } else {
-        handleCopy();
-    }
+    setImageError(false);
   };
 
   return (
@@ -178,7 +111,7 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
           </div>
 
           {/* Quote Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden border border-saffron-100 dark:border-slate-700 relative">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden border border-saffron-100 dark:border-slate-700 relative min-h-[400px]">
               {/* Decorative Header Pattern */}
               <div className="h-2 bg-gradient-to-r from-saffron-400 to-red-500" />
               
@@ -190,70 +123,33 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
                         alt="Maharaj Ji" 
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                            // Fallback if image fails
                             (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Maharaj&background=f97316&color=fff&size=128';
                         }}
                       />
                   </div>
 
-                  {quoteImage ? (
+                  {!imageError ? (
                       <div className="animate-in fade-in zoom-in-95 duration-300 mb-4">
                           <img 
                             src={quoteImage} 
-                            alt="Quote of the Day" 
+                            alt={`Quote for ${formatDateKey(currentDate)}`} 
                             className="w-full h-auto rounded-lg shadow-sm border border-slate-100 dark:border-slate-700"
+                            onError={() => setImageError(true)}
                           />
                       </div>
-                  ) : quote ? (
-                      <div className="animate-in fade-in zoom-in-95 duration-300">
-                          <div className="mb-6">
-                              <span className="text-4xl text-saffron-200 dark:text-slate-600 font-serif leading-none">❝</span>
-                              <p className="text-xl sm:text-2xl font-hindi text-slate-800 dark:text-slate-100 leading-loose px-2 whitespace-pre-line">
-                                  {quote.text}
-                              </p>
-                              <span className="text-4xl text-saffron-200 dark:text-slate-600 font-serif leading-none block text-right mt-2">❞</span>
-                          </div>
-
-                          <div className="w-16 h-1 bg-saffron-100 dark:bg-slate-700 mx-auto mb-4 rounded-full" />
-
-                          {quote.source && (
-                             <p className="text-sm font-hindi font-medium text-saffron-600 dark:text-saffron-400 italic">
-                                {quote.source}
-                             </p>
-                          )}
-                      </div>
                   ) : (
-                      <div className="py-12 text-slate-400">
-                          <p className="mb-2 text-lg">No quote available for this date.</p>
-                          <p className="text-xs">More quotes are being added soon.</p>
+                      <div className="py-12 text-slate-400 flex flex-col items-center justify-center">
+                          <ImageOff className="w-12 h-12 mb-3 opacity-20" />
+                          <p className="mb-2 text-lg font-medium">Quote image not found</p>
+                          <p className="text-xs opacity-70 text-center px-4 mb-2">
+                             We could not find the image for this date.
+                          </p>
+                          <p className="text-[10px] font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-slate-500">
+                                Expected: {quoteImage.split('/').pop()}
+                          </p>
                       </div>
                   )}
               </div>
-
-              {/* Action Bar */}
-              {(quote || quoteImage) && (
-                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 flex justify-around border-t border-slate-100 dark:border-slate-700">
-                      <button 
-                        onClick={handleCopy}
-                        className="flex flex-col items-center gap-1 text-slate-500 hover:text-saffron-600 transition-colors"
-                      >
-                          <div className="p-2 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700">
-                             {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
-                          </div>
-                          <span className="text-[10px] font-bold uppercase">{copied ? 'Copied' : (quoteImage ? 'Copy Link' : 'Copy')}</span>
-                      </button>
-
-                      <button 
-                         onClick={handleShare}
-                         className="flex flex-col items-center gap-1 text-slate-500 hover:text-saffron-600 transition-colors"
-                      >
-                          <div className="p-2 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700">
-                             <Share2 size={20} />
-                          </div>
-                          <span className="text-[10px] font-bold uppercase">Share</span>
-                      </button>
-                  </div>
-              )}
           </div>
 
       </div>
