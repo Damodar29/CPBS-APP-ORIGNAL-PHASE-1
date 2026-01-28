@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Info, Heart, MessageCircle, Youtube, Instagram, Facebook, Home, Download, Calendar } from 'lucide-react';
 
 interface SideMenuProps {
@@ -15,6 +15,22 @@ interface SideMenuProps {
 export const SideMenu: React.FC<SideMenuProps> = ({ 
   isOpen, onClose, onOpenAbout, onOpenDonate, onHome, onOpenDownloaded, onOpenDailyQuotes 
 }) => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleStatusChange = () => {
+      setIsOnline(navigator.onLine);
+    };
+
+    window.addEventListener('online', handleStatusChange);
+    window.addEventListener('offline', handleStatusChange);
+
+    return () => {
+      window.removeEventListener('online', handleStatusChange);
+      window.removeEventListener('offline', handleStatusChange);
+    };
+  }, []);
+
   const handleFeedback = () => {
     window.open('https://wa.me/917049304733', '_blank');
   };
@@ -107,7 +123,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({
         
         {/* Footer - added pb for safe area */}
         <div className="p-4 text-center text-xs text-slate-400 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-           v1.0.0 • Offline Mode
+           v1.0.0 • {isOnline ? 'Online' : 'Offline Mode'}
         </div>
       </div>
     </>

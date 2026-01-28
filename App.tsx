@@ -92,8 +92,9 @@ export const App: React.FC = () => {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef(0);
 
-  // --- ANDROID BACK BUTTON HANDLING (HISTORY API) ---
+  // --- NAVIGATION & HISTORY HANDLING ---
   
+  // This Ref keeps track of the current UI state for the event listener
   const stateRef = useRef({ 
     hasSelectedBhajan: !!selectedBhajan, 
     isSettingsOpen, 
@@ -102,64 +103,25 @@ export const App: React.FC = () => {
     isSideMenuOpen,
     isSearchFocused,
     isDailyQuotesOpen,
-    isDownloadedTab: activeTab === 'downloaded'
+    activeTab
   });
 
+  // Update Ref whenever state changes
   useEffect(() => {
     stateRef.current = { 
       hasSelectedBhajan: !!selectedBhajan, 
       isSettingsOpen, 
-      isAboutOpen,
-      isDonateOpen,
-      isSideMenuOpen,
-      isSearchFocused,
+      isAboutOpen, 
+      isDonateOpen, 
+      isSideMenuOpen, 
+      isSearchFocused, 
       isDailyQuotesOpen,
-      isDownloadedTab: activeTab === 'downloaded'
+      activeTab
     };
   }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab, isDailyQuotesOpen]);
 
-  useEffect(() => {
-    try {
-        window.history.replaceState({ view: 'root' }, '');
-    } catch (e) {
-        console.warn('History replaceState failed', e);
-    }
-
-    const handlePopState = (event: PopStateEvent) => {
-      try {
-          const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab, isDailyQuotesOpen } = stateRef.current;
-
-          if (hasSelectedBhajan) {
-            setSelectedBhajan(null);
-            setIsNewBhajan(false);
-          } else if (isDailyQuotesOpen) {
-            setIsDailyQuotesOpen(false);
-          } else if (isDonateOpen) {
-            setIsDonateOpen(false);
-          } else if (isSettingsOpen) {
-            setIsSettingsOpen(false);
-          } else if (isAboutOpen) {
-            setIsAboutOpen(false);
-          } else if (isSideMenuOpen) {
-            setIsSideMenuOpen(false);
-          } else if (isSearchFocused) {
-            setIsSearchFocused(false);
-            if (document.activeElement instanceof HTMLElement) {
-              document.activeElement.blur();
-            }
-          } else if (isDownloadedTab) {
-             setActiveTab('songs');
-          }
-      } catch (e) {
-          console.error("Error in popstate handler", e);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const openView = (viewName: string) => {
+  // Push a new entry to history stack
+  const pushHistoryState = (viewName: string) => {
     try {
         window.history.pushState({ view: viewName }, '', `#${viewName}`);
     } catch (e) {
@@ -167,38 +129,117 @@ export const App: React.FC = () => {
     }
   };
 
-  const goBack = useCallback(() => {
-    try {
-        window.history.back();
-    } catch (e) {
-        console.warn('History back failed', e);
-    }
+  // Central logic to close the topmost view
+  const closeTopmostView = useCallback(() => {
+      const { 
+          hasSelectedBhajan, 
+          isSettingsOpen, 
+          isAboutOpen, 
+          isDonateOpen, 
+          isSideMenuOpen, 
+          isSearchFocused, 
+          isDailyQuotesOpen,
+          activeTab
+      } = stateRef.current;
 
-    setTimeout(() => {
-        const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab, isDailyQuotesOpen } = stateRef.current;
-        
-        if (hasSelectedBhajan) setSelectedBhajan(null);
-        else if (isDailyQuotesOpen) setIsDailyQuotesOpen(false);
-        else if (isDonateOpen) setIsDonateOpen(false);
-        else if (isSettingsOpen) setIsSettingsOpen(false);
-        else if (isAboutOpen) setIsAboutOpen(false);
-        else if (isSideMenuOpen) setIsSideMenuOpen(false);
-        else if (isSearchFocused) {
-            setIsSearchFocused(false);
-            if (document.activeElement instanceof HTMLElement) {
-              document.activeElement.blur();
-            }
-        } else if (isDownloadedTab) {
-            setActiveTab('songs');
+      // Priority Order: Modals > Side Menu > Search > Tabs
+      if (hasSelectedBhajan) {
+        setSelectedBhajan(null);
+        setIsNewBhajan(false);
+        return true;
+      } 
+      if (isDailyQuotesOpen) {
+        setIsDailyQuotesOpen(false);
+        return true;
+      }
+      if (isDonateOpen) {
+        setIsDonateOpen(false);
+        return true;
+      } 
+      if (isSettingsOpen) {
+        setIsSettingsOpen(false);
+        return true;
+      } 
+      if (isAboutOpen) {
+        setIsAboutOpen(false);
+        return true;
+      } 
+      if (isSideMenuOpen) {
+        setIsSideMenuOpen(false);
+        return true;
+      } 
+      if (isSearchFocused) {
+        setIsSearchFocused(false);
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
         }
-    }, 100);
+        return true;
+      } 
+      if (activeTab === 'downloaded') {
+         setActiveTab('songs');
+         return true;
+      }
+      if (activeTab !== 'songs') {
+         setActiveTab('songs');
+         return true;
+      }
+      return false;
   }, []);
 
-  // --- ACTIONS ---
+  // Handle Hardware Back Button (via popstate)
+  useEffect(() => {
+    // Ensure we have a base state
+    try {
+        window.history.replaceState({ view: 'root' }, '');
+    } catch (e) {}
+
+    const handlePopState = (event: PopStateEvent) => {
+      // When hardware back is pressed, browser pops history.
+      // We just need to sync our UI state to match "one step back".
+      // Our closeTopmostView logic effectively does this "step back".
+      closeTopmostView();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [closeTopmostView]);
+
+  // Handle UI Back Buttons (Explicit Click)
+  const goBack = useCallback(() => {
+    // 1. Manually close the view immediately so UI feels responsive
+    const handled = closeTopmostView();
+    
+    // 2. If we successfully closed something, we ideally want to sync the browser history 
+    // so the "Forward" button doesn't retain the modal state, OR just so the stack doesn't grow.
+    // However, calling history.back() here might trigger popstate and run logic twice.
+    // The safest "Hybrid" way:
+    // If we closed a modal, we should technically go back in history.
+    if (handled) {
+        try {
+            // We use back() to keep stack clean. 
+            // If the listener fires, closeTopmostView checks stateRef.
+            // Since we ALREADY updated the state above (synchronously or via React batching), 
+            // the listener might see the 'closed' state and do nothing, which is fine.
+            window.history.back();
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+  }, [closeTopmostView]);
+
+  // --- VIEW OPENING HELPERS ---
+
+  const handleTabChange = (tab: AppTab) => {
+      if (tab === activeTab) return;
+      
+      // Push state so Back button works for tabs
+      pushHistoryState(tab);
+      setActiveTab(tab);
+      if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+  };
 
   const addToHistory = (id: string, type: 'song' | 'book' | 'lecture') => {
     setHistoryItems(prev => {
-      // Remove existing entry of same id/type
       const filtered = prev.filter(item => !(item.id === id && item.type === type));
       const newEntry: HistoryEntry = { id, type, timestamp: Date.now() };
       return [newEntry, ...filtered].slice(0, 50);
@@ -213,7 +254,7 @@ export const App: React.FC = () => {
     setSelectedBhajan(bhajan);
     setIsNewBhajan(false);
     setIsSearchFocused(false);
-    openView('reader');
+    pushHistoryState('reader');
   };
 
   const handleOpenLecture = (lecture: LectureData) => {
@@ -235,7 +276,7 @@ export const App: React.FC = () => {
       
       setSelectedBhajan(lectureAsBhajan);
       setIsNewBhajan(false);
-      openView('reader');
+      pushHistoryState('reader');
   };
 
   const handleOpenBook = (book: Book) => {
@@ -249,47 +290,52 @@ export const App: React.FC = () => {
 
   const handleOpenSettings = () => {
     setIsSettingsOpen(true);
-    openView('settings');
+    pushHistoryState('settings');
   };
 
   const handleOpenAbout = () => {
-    setIsSideMenuOpen(false);
+    setIsSideMenuOpen(false); 
     setIsAboutOpen(true);
-    openView('about');
+    pushHistoryState('about');
   };
 
   const handleOpenDonate = () => {
     setIsSideMenuOpen(false);
     setIsDonateOpen(true);
-    openView('donate');
+    pushHistoryState('donate');
   };
 
   const handleOpenDailyQuotes = () => {
     setIsSideMenuOpen(false);
     setIsDailyQuotesOpen(true);
-    openView('daily-quotes');
+    pushHistoryState('daily-quotes');
   };
 
   const handleOpenMenu = () => {
     setIsSideMenuOpen(true);
-    openView('menu');
+    pushHistoryState('menu');
   };
 
   const handleOpenDownloaded = () => {
     setIsSideMenuOpen(false);
     setActiveTab('downloaded');
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+    // Special case: Replace history so Back goes to previous screen (Songs), not Menu
+    try {
+       window.history.replaceState({ view: 'downloaded' }, '', '#downloaded');
+    } catch(e) {}
   };
 
   const handleGoHome = () => {
     setIsSideMenuOpen(false);
     setActiveTab('songs');
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+    pushHistoryState('songs');
   };
 
   const handleCreateBhajanWrapper = () => {
     handleCreateBhajan(); 
-    openView('reader');
+    pushHistoryState('reader');
   };
 
 
@@ -558,11 +604,11 @@ export const App: React.FC = () => {
       )}
 
       {activeTab === 'downloaded' && (
-          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900">
+          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900 animate-in slide-in-from-right duration-200">
               <DownloadedList 
                   allBhajans={bhajans} 
                   onSelect={handleOpenReader} 
-                  onBack={() => setActiveTab('songs')}
+                  onBack={goBack}
                   script={script}
               />
           </div>
@@ -775,7 +821,7 @@ export const App: React.FC = () => {
 
       <BottomNav 
         activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} 
-        onTabChange={setActiveTab} 
+        onTabChange={handleTabChange} 
         devMode={devMode}
       />
     </div>
