@@ -73,9 +73,9 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ isOpen, onClose, onOpe
 
                 <div className="bg-saffron-50 dark:bg-slate-800 p-6 rounded-xl border border-saffron-100 dark:border-slate-700 my-6 text-center shadow-sm">
                   <p className="mb-2 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">Mahamantra</p>
-                  <p className="text-lg sm:text-xl font-hindi font-bold text-saffron-700 dark:text-saffron-400 leading-loose">
-                    हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे<br/>
-                    हरे राम हरे राम राम राम हरे हरे
+                  <p className="text-lg sm:text-xl font-sans font-bold text-saffron-700 dark:text-saffron-400 leading-loose">
+                    Hare Krishna Hare Krishna Krishna Krishna Hare Hare<br/>
+                    Hare Rama Hare Rama Rama Rama Hare Hare
                   </p>
                 </div>
 
@@ -122,11 +122,11 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ isOpen, onClose, onOpe
                 </p>
 
                 <p>
-                  अपने आध्यात्मिक गुरु के आदेशों का पालन करते हुए, उनके शिष्य, <strong className="text-saffron-600 dark:text-saffron-400">श्री श्री 108 श्री वासुदेव शरण “विरही” जी महाराज</strong> ने मिशन का विस्तार किया और देश के उत्तर-पश्चिम और मध्य क्षेत्रों में प्रचार करना शुरू कर दिया।
+                  Following the orders of his spiritual master, his disciple, <strong className="text-saffron-600 dark:text-saffron-400">Sri Sri 108 Sri Vasudev Sharan “Virahi” Ji Maharaj</strong> expanded the mission and started preaching in the north-western and central regions of the country.
                 </p>
 
                 <p>
-                  बाद में उन्होंने <strong>“श्री चैतन्य प्रेम भक्ति संघ”</strong> नामक एक संस्था की स्थापना की, जो पूरी तरह से भगवान चैतन्य की शिक्षाओं पर आधारित आध्यात्मिक प्रथाओं को शामिल करती है।
+                  Later, he established an organization named <strong>“Shree Chaitanya Prem Bhakti Sangh”</strong>, which comprises spiritual practices entirely based on the teachings of Lord Chaitanya.
                 </p>
             </>
         ) : (

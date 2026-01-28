@@ -20,6 +20,7 @@ import { DownloadedList } from './components/DownloadedList';
 import { LectureList } from './components/LectureList';
 import { DailyQuotes } from './components/DailyQuotes';
 import { CategoryList } from './components/CategoryList';
+import { QuotePopup } from './components/QuotePopup';
 
 // Increment this version when logic changes to force client update
 const DATA_VERSION = '15';
@@ -40,6 +41,9 @@ export const App: React.FC = () => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [isDailyQuotesOpen, setIsDailyQuotesOpen] = useState(false);
+  
+  // Daily Quote Popup State
+  const [showQuotePopup, setShowQuotePopup] = useState(false);
 
   // Settings State
   const [darkMode, setDarkMode] = useState(() => {
@@ -99,10 +103,11 @@ export const App: React.FC = () => {
     hasSelectedBhajan: !!selectedBhajan, 
     isSettingsOpen, 
     isAboutOpen,
-    isDonateOpen,
-    isSideMenuOpen,
+    isDonateOpen, 
+    isSideMenuOpen, 
     isSearchFocused, 
     isDailyQuotesOpen,
+    showQuotePopup,
     activeTab
   });
 
@@ -116,9 +121,10 @@ export const App: React.FC = () => {
       isSideMenuOpen, 
       isSearchFocused, 
       isDailyQuotesOpen,
+      showQuotePopup,
       activeTab
     };
-  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab, isDailyQuotesOpen]);
+  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab, isDailyQuotesOpen, showQuotePopup]);
 
   // Push a new entry to history stack
   const pushHistoryState = (viewName: string) => {
@@ -139,10 +145,15 @@ export const App: React.FC = () => {
           isSideMenuOpen, 
           isSearchFocused, 
           isDailyQuotesOpen,
+          showQuotePopup,
           activeTab
       } = stateRef.current;
 
       // Priority Order: Modals > Side Menu > Search > Tabs
+      if (showQuotePopup) {
+        setShowQuotePopup(false);
+        return true;
+      }
       if (hasSelectedBhajan) {
         setSelectedBhajan(null);
         setIsNewBhajan(false);
@@ -194,9 +205,6 @@ export const App: React.FC = () => {
     } catch (e) {}
 
     const handlePopState = (event: PopStateEvent) => {
-      // When hardware back is pressed, browser pops history.
-      // We just need to sync our UI state to match "one step back".
-      // Our closeTopmostView logic effectively does this "step back".
       closeTopmostView();
     };
 
@@ -206,20 +214,9 @@ export const App: React.FC = () => {
 
   // Handle UI Back Buttons (Explicit Click)
   const goBack = useCallback(() => {
-    // 1. Manually close the view immediately so UI feels responsive
     const handled = closeTopmostView();
-    
-    // 2. If we successfully closed something, we ideally want to sync the browser history 
-    // so the "Forward" button doesn't retain the modal state, OR just so the stack doesn't grow.
-    // However, calling history.back() here might trigger popstate and run logic twice.
-    // The safest "Hybrid" way:
-    // If we closed a modal, we should technically go back in history.
     if (handled) {
         try {
-            // We use back() to keep stack clean. 
-            // If the listener fires, closeTopmostView checks stateRef.
-            // Since we ALREADY updated the state above (synchronously or via React batching), 
-            // the listener might see the 'closed' state and do nothing, which is fine.
             window.history.back();
         } catch (e) {
             console.warn(e);
@@ -231,8 +228,6 @@ export const App: React.FC = () => {
 
   const handleTabChange = (tab: AppTab) => {
       if (tab === activeTab) return;
-      
-      // Push state so Back button works for tabs
       pushHistoryState(tab);
       setActiveTab(tab);
       if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
@@ -320,7 +315,6 @@ export const App: React.FC = () => {
     setIsSideMenuOpen(false);
     setActiveTab('downloaded');
     if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
-    // Special case: Replace history so Back goes to previous screen (Songs), not Menu
     try {
        window.history.replaceState({ view: 'downloaded' }, '', '#downloaded');
     } catch(e) {}
@@ -387,11 +381,39 @@ export const App: React.FC = () => {
     
     setBhajans(loadedData);
 
+    // DAILY QUOTE POPUP CHECK LOGIC
+    const checkDailyQuote = (delay: number) => {
+        const lastDate = localStorage.getItem('cpbs_last_quote_date');
+        const today = new Date().toDateString(); // e.g. "Wed Jan 29 2025"
+        
+        if (lastDate !== today) {
+            setTimeout(() => {
+                setShowQuotePopup(true);
+                localStorage.setItem('cpbs_last_quote_date', today);
+            }, delay); 
+        }
+    };
+
+    // Check on Initial Mount (2.5s delay for splash)
+    checkDailyQuote(2500);
+
+    // Check on App Resume (1s delay)
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            checkDailyQuote(1000);
+        }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const MIN_SPLASH_DURATION = 1000; 
     const elapsed = Date.now() - startTime;
     const remainingTime = Math.max(0, MIN_SPLASH_DURATION - elapsed);
     const timer = setTimeout(() => setIsLoading(false), remainingTime);
-    return () => clearTimeout(timer);
+    
+    return () => {
+        clearTimeout(timer);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -589,6 +611,16 @@ export const App: React.FC = () => {
 
       {isDailyQuotesOpen && (
         <DailyQuotes onBack={goBack} />
+      )}
+
+      {showQuotePopup && (
+        <QuotePopup 
+            onClose={() => setShowQuotePopup(false)} 
+            onOpenFull={() => {
+                setShowQuotePopup(false);
+                handleOpenDailyQuotes();
+            }}
+        />
       )}
 
       {/* Full Screen Views that cover main */}
