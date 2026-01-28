@@ -42,6 +42,12 @@ export interface HistoryEntry {
   timestamp?: number;
 }
 
+export interface DailyQuote {
+  dateKey: string; // Format: "1 जनवरी"
+  text: string;
+  source: string;
+}
+
 export type FontSize = number;
 export type ScriptType = 'devanagari' | 'iast';
 export type AppTab = 'songs' | 'books' | 'history' | 'downloaded' | 'lectures';

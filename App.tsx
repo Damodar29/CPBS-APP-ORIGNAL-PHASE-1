@@ -18,9 +18,10 @@ import { BottomNav } from './components/BottomNav';
 import { BookList } from './components/BookList';
 import { DownloadedList } from './components/DownloadedList';
 import { LectureList } from './components/LectureList';
+import { DailyQuotes } from './components/DailyQuotes';
 
 // Increment this version when logic changes to force client update
-const DATA_VERSION = '10';
+const DATA_VERSION = '11';
 
 export const App: React.FC = () => {
   // --- STATE ---
@@ -37,6 +38,7 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [isDailyQuotesOpen, setIsDailyQuotesOpen] = useState(false);
 
   // Settings State
   const [darkMode, setDarkMode] = useState(() => {
@@ -98,6 +100,7 @@ export const App: React.FC = () => {
     isDonateOpen,
     isSideMenuOpen,
     isSearchFocused,
+    isDailyQuotesOpen,
     isDownloadedTab: activeTab === 'downloaded'
   });
 
@@ -109,9 +112,10 @@ export const App: React.FC = () => {
       isDonateOpen,
       isSideMenuOpen,
       isSearchFocused,
+      isDailyQuotesOpen,
       isDownloadedTab: activeTab === 'downloaded'
     };
-  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab]);
+  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab, isDailyQuotesOpen]);
 
   useEffect(() => {
     try {
@@ -122,11 +126,13 @@ export const App: React.FC = () => {
 
     const handlePopState = (event: PopStateEvent) => {
       try {
-          const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab } = stateRef.current;
+          const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab, isDailyQuotesOpen } = stateRef.current;
 
           if (hasSelectedBhajan) {
             setSelectedBhajan(null);
             setIsNewBhajan(false);
+          } else if (isDailyQuotesOpen) {
+            setIsDailyQuotesOpen(false);
           } else if (isDonateOpen) {
             setIsDonateOpen(false);
           } else if (isSettingsOpen) {
@@ -168,9 +174,10 @@ export const App: React.FC = () => {
     }
 
     setTimeout(() => {
-        const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab } = stateRef.current;
+        const { hasSelectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, isDownloadedTab, isDailyQuotesOpen } = stateRef.current;
         
         if (hasSelectedBhajan) setSelectedBhajan(null);
+        else if (isDailyQuotesOpen) setIsDailyQuotesOpen(false);
         else if (isDonateOpen) setIsDonateOpen(false);
         else if (isSettingsOpen) setIsSettingsOpen(false);
         else if (isAboutOpen) setIsAboutOpen(false);
@@ -254,6 +261,12 @@ export const App: React.FC = () => {
     setIsSideMenuOpen(false);
     setIsDonateOpen(true);
     openView('donate');
+  };
+
+  const handleOpenDailyQuotes = () => {
+    setIsSideMenuOpen(false);
+    setIsDailyQuotesOpen(true);
+    openView('daily-quotes');
   };
 
   const handleOpenMenu = () => {
@@ -485,6 +498,7 @@ export const App: React.FC = () => {
         onOpenDonate={handleOpenDonate}
         onHome={handleGoHome}
         onOpenDownloaded={handleOpenDownloaded}
+        onOpenDailyQuotes={handleOpenDailyQuotes}
       />
 
       <SettingsScreen 
@@ -518,6 +532,10 @@ export const App: React.FC = () => {
          isOpen={isDonateOpen}
          onClose={goBack}
       />
+
+      {isDailyQuotesOpen && (
+        <DailyQuotes onBack={goBack} />
+      )}
 
       {/* Full Screen Views that cover main */}
       {selectedBhajan && (

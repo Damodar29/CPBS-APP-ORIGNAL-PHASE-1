@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Info, Heart, MessageCircle, Youtube, Instagram, Facebook, Home, Download } from 'lucide-react';
+import { X, Info, Heart, MessageCircle, Youtube, Instagram, Facebook, Home, Download, Calendar } from 'lucide-react';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -9,10 +9,11 @@ interface SideMenuProps {
   onOpenDonate?: () => void;
   onHome?: () => void;
   onOpenDownloaded?: () => void;
+  onOpenDailyQuotes?: () => void;
 }
 
 export const SideMenu: React.FC<SideMenuProps> = ({ 
-  isOpen, onClose, onOpenAbout, onOpenDonate, onHome, onOpenDownloaded 
+  isOpen, onClose, onOpenAbout, onOpenDonate, onHome, onOpenDownloaded, onOpenDailyQuotes 
 }) => {
   const handleFeedback = () => {
     window.open('https://wa.me/917049304733', '_blank');
@@ -73,6 +74,8 @@ export const SideMenu: React.FC<SideMenuProps> = ({
         <div className="flex-1 p-4 space-y-1 overflow-y-auto">
           
           <MenuItem icon={<Home />} label="Home" onClick={onHome} />
+          
+          <MenuItem icon={<Calendar />} label="Daily Quotes (नित्य वाणी)" onClick={onOpenDailyQuotes} />
           
           <MenuItem icon={<Download />} label="Downloaded Bhajans" onClick={onOpenDownloaded} />
 
