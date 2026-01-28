@@ -50,7 +50,7 @@ export interface DailyQuote {
 
 export type FontSize = number;
 export type ScriptType = 'devanagari' | 'iast';
-export type AppTab = 'songs' | 'books' | 'history' | 'downloaded' | 'lectures';
+export type AppTab = 'songs' | 'authors' | 'books' | 'history' | 'downloaded' | 'lectures';
 
 export interface AppSettings {
   darkMode: boolean;

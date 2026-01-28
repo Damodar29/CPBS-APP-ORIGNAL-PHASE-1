@@ -19,9 +19,10 @@ import { BookList } from './components/BookList';
 import { DownloadedList } from './components/DownloadedList';
 import { LectureList } from './components/LectureList';
 import { DailyQuotes } from './components/DailyQuotes';
+import { CategoryList } from './components/CategoryList';
 
 // Increment this version when logic changes to force client update
-const DATA_VERSION = '11';
+const DATA_VERSION = '14';
 
 export const App: React.FC = () => {
   // --- STATE ---
@@ -62,7 +63,7 @@ export const App: React.FC = () => {
   });
 
   const [settingsLanguage, setSettingsLanguage] = useState<'en' | 'hi'>(() => {
-     return (localStorage.getItem('cpbs_settings_lang') as 'en' | 'hi') || 'hi';
+     return (localStorage.getItem('cpbs_settings_lang') as 'en' | 'hi') || 'en';
   });
 
   const [devMode, setDevMode] = useState<boolean>(false);
@@ -653,6 +654,14 @@ export const App: React.FC = () => {
             />
          )}
 
+         {activeTab === 'authors' && (
+            <CategoryList 
+               bhajans={filteredBhajans}
+               onSelect={handleOpenReader}
+               script={script}
+            />
+         )}
+
          {activeTab === 'books' && (
             <BookList books={BOOKS_DATA} onSelect={handleOpenBook} />
          )}
@@ -764,7 +773,11 @@ export const App: React.FC = () => {
          )}
       </main>
 
-      <BottomNav activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} onTabChange={setActiveTab} />
+      <BottomNav 
+        activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} 
+        onTabChange={setActiveTab} 
+        devMode={devMode}
+      />
     </div>
   );
 };

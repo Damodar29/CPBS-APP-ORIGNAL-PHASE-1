@@ -238,13 +238,11 @@ const extractAuthor = (content: string): { deva: string, iast: string } | undefi
     'विद्यापति': { deva: 'विद्यापति जी', iast: 'Vidyāpati Jī' },
     'जयदेव': { deva: 'जयदेव गोस्वामी जी', iast: 'Jayadeva Gosvāmī Jī' },
     'मधुसूदन': { deva: 'मधुसूदन दास', iast: 'Madhusūdana Dās' },
-    'नारायण': { deva: 'नारायणदास जी', iast: 'Nārāyaṇadās Jī' },
     'परमानन्द': { deva: 'परमानन्ददास जी', iast: 'Paramānandadās Jī' },
     'कुम्भन': { deva: 'कुम्भनदास जी', iast: 'Kumbhanadās Jī' },
     'कृष्णदास': { deva: 'कृष्णदास कविराज गोस्वामी', iast: 'Kṛṣṇadāsa Kavirāja Gosvāmī' },
     'रूप गोस्वामी': { deva: 'रूप गोस्वामी जी', iast: 'Rūpa Gosvāmī Jī' },
     'सनातन': { deva: 'सनातन गोस्वामीजी', iast: 'Sanātana Gosvāmījī' },
-    'जीव': { deva: 'जीव गोस्वामी जी', iast: 'Jīva Gosvāmī Jī' },
     'विश्वनाथ': { deva: 'विश्वनाथ चक्रवर्ती ठाकुर', iast: 'Viśvanātha Cakravartī Ṭhākura' },
     'बलदेव': { deva: 'बलदेव विद्याभूषण', iast: 'Baladeva Vidyābhūṣaṇa' },
     'जगन्नाथ': { deva: 'जगन्नाथ दास बाबाजी महाराज', iast: 'Jagannātha Dāsa Bābājī Mahārāja' },
@@ -474,7 +472,17 @@ export const parseRawBhajanText = (rawText: string): Bhajan[] => {
             const rawTokens = transliteratedText.toLowerCase().split(/[\s,।॥!?-]+/);
             const searchTokens = rawTokens.filter(t => t.length > 2).map(t => smartNormalize(t));
             const uniqueTokens = Array.from(new Set(searchTokens));
-            const authorData = extractAuthor(cleanContent);
+            
+            // Extract author with specific overrides
+            let authorData = extractAuthor(cleanContent);
+            
+            if (songNumber) {
+                 if (songNumber === '51') {
+                     authorData = { deva: 'मीराबाई जी', iast: 'Mīrābāī Jī' };
+                 } else if (['88', '115', '189', '193', '229', '230', '285', '288'].includes(songNumber)) {
+                     authorData = undefined;
+                 }
+            }
 
             // Check for audio mapping
             // Priority: 1. By Song Number, 2. By Clean Title
