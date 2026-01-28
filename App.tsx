@@ -822,7 +822,6 @@ export const App: React.FC = () => {
       <BottomNav 
         activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} 
         onTabChange={handleTabChange} 
-        devMode={devMode}
       />
     </div>
   );

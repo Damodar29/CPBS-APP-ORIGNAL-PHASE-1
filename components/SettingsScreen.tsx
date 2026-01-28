@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Moon, Sun, Check, Plus, Database, RotateCcw, Copy, Lock, RefreshCcw, MessageCircle, Languages } from 'lucide-react';
+import { X, Moon, Sun, Check, Plus, Database, RotateCcw, Copy, Lock, RefreshCcw, MessageCircle, Languages, Trash2 } from 'lucide-react';
 import { FontSize, ScriptType, Bhajan } from '../types';
 import { RAW_BHAJAN_DATA } from '../data/rawBhajans';
 import { parseRawBhajanText } from '../utils/textProcessor';
@@ -70,7 +70,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       enterPass: "Enter Developer Password",
       passDisable: "Password to Disable",
       cancel: "Cancel",
-      submit: "Submit"
+      submit: "Submit",
+      clearCache: "Clear App Cache & Restart"
     },
     hi: {
       title: "सेटिंग्स",
@@ -98,7 +99,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       enterPass: "डेवलपर पासवर्ड दर्ज करें",
       passDisable: "अक्षम करने के लिए पासवर्ड",
       cancel: "रद्द करें",
-      submit: "जमा करें"
+      submit: "जमा करें",
+      clearCache: "ऐप कैश मिटाएं और रीस्टार्ट करें"
     }
   }[settingsLanguage];
 
@@ -170,6 +172,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleFeedback = () => {
     // Feedback combined with WhatsApp
     window.open('https://wa.me/917049304733', '_blank');
+  };
+
+  const handleClearCache = async () => {
+    if (window.confirm(settingsLanguage === 'en' ? "This will clear all app data, settings, and cached files. The app will restart. Continue?" : "यह सभी ऐप डेटा, सेटिंग्स और कैश को मिटा देगा। ऐप रीस्टार्ट होगा। जारी रखें?")) {
+       try {
+         // Clear LocalStorage
+         localStorage.clear();
+         
+         // Clear Cache API
+         if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(key => caches.delete(key)));
+         }
+         
+         // Reload
+         window.location.reload();
+       } catch (e) {
+         console.error(e);
+         alert("Failed to clear cache completely.");
+       }
+    }
   };
 
   const handleExportChanges = () => {
@@ -376,6 +399,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-3 px-2 leading-relaxed">
               {t.workInProgress}
             </p>
+         </section>
+
+         {/* Troubleshooting Section (Added for Clear Cache) */}
+         <section>
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm mt-6">
+                <button 
+                    type="button"
+                    onClick={handleClearCache}
+                    className="w-full flex items-center gap-3 p-4 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-slate-700 dark:text-slate-200 font-medium"
+                >
+                    <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-200 dark:border-red-800">
+                        <Trash2 size={18} />
+                    </div>
+                    <span>{t.clearCache}</span>
+                </button>
+            </div>
          </section>
 
         {/* Song Language Section (Moved to Bottom) */}

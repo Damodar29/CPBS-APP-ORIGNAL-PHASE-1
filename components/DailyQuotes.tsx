@@ -54,8 +54,9 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
     // For all other days: 1-{DayOfYear}.jpg
     const fileName = dayOfYear === 1 ? "1.jpg" : `1-${dayOfYear}.jpg`;
     
+    // Append version param (v=2) to force cache refresh for updated images
     // Append retryTrigger to URL to bypass browser cache on retry
-    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${fileName}?retry=${retryTrigger}`;
+    return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${fileName}?v=2&retry=${retryTrigger}`;
   };
 
   const quoteImage = getQuoteImageUrl(currentDate);

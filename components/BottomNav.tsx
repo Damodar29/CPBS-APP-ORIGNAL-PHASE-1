@@ -6,10 +6,9 @@ import { AppTab } from '../types';
 interface BottomNavProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
-  devMode: boolean;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, devMode }) => {
+export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 pb-[env(safe-area-inset-bottom)] z-30">
       <div className="flex items-center justify-around h-16">
@@ -19,14 +18,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, de
           active={activeTab === 'songs'} 
           onClick={() => onTabChange('songs')} 
         />
-        {devMode && (
-          <NavButton 
-            icon={<Users />} 
-            label="Authors" 
-            active={activeTab === 'authors'} 
-            onClick={() => onTabChange('authors')} 
-          />
-        )}
+        <NavButton 
+          icon={<Users />} 
+          label="Authors" 
+          active={activeTab === 'authors'} 
+          onClick={() => onTabChange('authors')} 
+        />
         <NavButton 
           icon={<BookOpen />} 
           label="Books" 
