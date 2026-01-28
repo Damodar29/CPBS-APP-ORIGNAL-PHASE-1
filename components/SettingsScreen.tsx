@@ -2,8 +2,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Moon, Sun, Check, Plus, Database, RotateCcw, Copy, Lock, RefreshCcw, MessageCircle, Languages, Trash2 } from 'lucide-react';
 import { FontSize, ScriptType, Bhajan } from '../types';
-import { RAW_BHAJAN_DATA } from '../data/rawBhajans';
+import { RAW_BHAJAN_DATA_1 } from '../data/rawBhajans1';
+import { RAW_BHAJAN_DATA_2 } from '../data/rawBhajans2';
+import { RAW_BHAJAN_DATA_3 } from '../data/rawBhajans3';
+import { RAW_BHAJAN_DATA_4 } from '../data/rawBhajans4';
+import { RAW_BHAJAN_DATA_5 } from '../data/rawBhajans5';
+import { RAW_BHAJAN_DATA_6 } from '../data/rawBhajans6';
 import { parseRawBhajanText } from '../utils/textProcessor';
+
+const RAW_BHAJAN_DATA = RAW_BHAJAN_DATA_1 + RAW_BHAJAN_DATA_2 + RAW_BHAJAN_DATA_3 + RAW_BHAJAN_DATA_4 + RAW_BHAJAN_DATA_5 + RAW_BHAJAN_DATA_6;
 
 interface SettingsScreenProps {
   isOpen: boolean;

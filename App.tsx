@@ -1,7 +1,12 @@
 
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { Search, Menu, Settings, X, History, Trash2, FileText, Headphones, Music } from 'lucide-react';
-import { RAW_BHAJAN_DATA } from './data/rawBhajans';
+import { RAW_BHAJAN_DATA_1 } from './data/rawBhajans1';
+import { RAW_BHAJAN_DATA_2 } from './data/rawBhajans2';
+import { RAW_BHAJAN_DATA_3 } from './data/rawBhajans3';
+import { RAW_BHAJAN_DATA_4 } from './data/rawBhajans4';
+import { RAW_BHAJAN_DATA_5 } from './data/rawBhajans5';
+import { RAW_BHAJAN_DATA_6 } from './data/rawBhajans6';
 import { BOOKS_DATA } from './data/books';
 import { LECTURES_DATA } from './data/lectures';
 import { parseRawBhajanText, calculateSearchScore, getMatchingSnippet, convertToIAST, smartNormalize, transliterateForSearch, isFuzzyMatch } from './utils/textProcessor';
@@ -24,6 +29,8 @@ import { QuotePopup } from './components/QuotePopup';
 
 // Increment this version when logic changes to force client update
 const DATA_VERSION = '15';
+
+const RAW_BHAJAN_DATA = RAW_BHAJAN_DATA_1 + RAW_BHAJAN_DATA_2 + RAW_BHAJAN_DATA_3 + RAW_BHAJAN_DATA_4 + RAW_BHAJAN_DATA_5 + RAW_BHAJAN_DATA_6;
 
 export const App: React.FC = () => {
   // --- STATE ---
