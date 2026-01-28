@@ -1,5 +1,5 @@
 
-import { Bhajan, ScriptType, BhajanAudio } from '../types';
+import { Bhajan, ScriptType, BhajanAudio, Book, LectureData } from '../types';
 
 // ----------------------------------------------------------------------
 // 1. Search Normalization Maps (Devanagari -> Plain English)
@@ -349,6 +349,95 @@ export const calculateSearchScore = (bhajan: Bhajan, query: string, script: Scri
         }
     });
     score += (tokenMatches * 10);
+
+    return score;
+};
+
+// --- Book Search Logic ---
+export const calculateBookScore = (book: Book, query: string): number => {
+    if (!query || query.trim().length === 0) return 0;
+
+    const rawQuery = query.toLowerCase().trim();
+    const phoneticQuery = transliterateForSearch(rawQuery);
+    const normalizedQuery = smartNormalize(phoneticQuery);
+    const queryTerms = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
+
+    let score = 0;
+
+    const titleRaw = book.title.toLowerCase();
+    const titlePhonetic = transliterateForSearch(titleRaw);
+    const titleNorm = smartNormalize(titlePhonetic);
+
+    // Exact match
+    if (titleRaw === rawQuery || titleNorm === normalizedQuery) return 1000;
+    
+    // Starts with
+    if (titleRaw.startsWith(rawQuery) || titleNorm.startsWith(normalizedQuery)) score += 500;
+    
+    // Contains
+    if (titleRaw.includes(rawQuery) || titleNorm.includes(normalizedQuery)) score += 200;
+
+    // Fuzzy words in title
+    let titleMatches = 0;
+    const titleTokens = titleNorm.split(/\s+/);
+    queryTerms.forEach(qt => {
+        if (titleTokens.some(tt => isFuzzyMatch(tt, qt))) {
+            titleMatches++;
+        }
+    });
+    score += (titleMatches * 50);
+
+    // File name matching
+    if (book.fileName.toLowerCase().includes(rawQuery)) {
+        score += 100;
+    }
+
+    return score;
+};
+
+// --- Lecture Search Logic ---
+export const calculateLectureScore = (lecture: LectureData, query: string): number => {
+    if (!query || query.trim().length === 0) return 0;
+
+    const rawQuery = query.toLowerCase().trim();
+    const phoneticQuery = transliterateForSearch(rawQuery);
+    const normalizedQuery = smartNormalize(phoneticQuery);
+    const queryTerms = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
+
+    let score = 0;
+
+    const titleRaw = lecture.title.toLowerCase();
+    const titlePhonetic = transliterateForSearch(titleRaw);
+    const titleNorm = smartNormalize(titlePhonetic);
+
+    // Exact Title
+    if (titleRaw === rawQuery || titleNorm === normalizedQuery) return 1000;
+
+    // Starts with
+    if (titleRaw.startsWith(rawQuery) || titleNorm.startsWith(normalizedQuery)) score += 500;
+
+    // Contains Title
+    if (titleRaw.includes(rawQuery) || titleNorm.includes(normalizedQuery)) score += 200;
+
+    // Fuzzy words in title
+    let titleMatches = 0;
+    const titleTokens = titleNorm.split(/\s+/);
+    queryTerms.forEach(qt => {
+        if (titleTokens.some(tt => isFuzzyMatch(tt, qt))) {
+            titleMatches++;
+        }
+    });
+    score += (titleMatches * 50);
+
+    // Description Search
+    const descRaw = lecture.description.toLowerCase();
+    const descPhonetic = transliterateForSearch(descRaw);
+    const descNorm = smartNormalize(descPhonetic);
+
+    if (descNorm.includes(normalizedQuery)) score += 100;
+
+    // Date Search
+    if (lecture.date && lecture.date.includes(rawQuery)) score += 300;
 
     return score;
 };

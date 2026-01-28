@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
-import { Search, Menu, Settings, X, History, Trash2, FileText, Headphones, Music } from 'lucide-react';
+import { Search, Menu, Settings, X, History, Trash2, FileText, Headphones, Music, BookOpen, Mic } from 'lucide-react';
 import { RAW_BHAJAN_DATA_1 } from './data/rawBhajans1';
 import { RAW_BHAJAN_DATA_2 } from './data/rawBhajans2';
 import { RAW_BHAJAN_DATA_3 } from './data/rawBhajans3';
@@ -9,7 +9,7 @@ import { RAW_BHAJAN_DATA_5 } from './data/rawBhajans5';
 import { RAW_BHAJAN_DATA_6 } from './data/rawBhajans6';
 import { BOOKS_DATA } from './data/books';
 import { LECTURES_DATA } from './data/lectures';
-import { parseRawBhajanText, calculateSearchScore, getMatchingSnippet, convertToIAST, smartNormalize, transliterateForSearch, isFuzzyMatch } from './utils/textProcessor';
+import { parseRawBhajanText, calculateSearchScore, getMatchingSnippet, convertToIAST, smartNormalize, transliterateForSearch, isFuzzyMatch, calculateBookScore, calculateLectureScore } from './utils/textProcessor';
 import { Bhajan, FontSize, ScriptType, AppTab, LectureData, Book, HistoryEntry } from './types';
 import { BhajanList } from './components/BhajanList';
 import { BhajanReader } from './components/BhajanReader';
@@ -36,13 +36,24 @@ export const App: React.FC = () => {
   // --- STATE ---
   const [isLoading, setIsLoading] = useState(true);
   const [bhajans, setBhajans] = useState<Bhajan[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Navigation State
+  const [activeTab, setActiveTab] = useState<AppTab>('songs');
+  
+  // Separate Search States for each tab
+  const [tabQueries, setTabQueries] = useState<Record<string, string>>({
+    songs: '',
+    authors: '',
+    books: '',
+    lectures: '',
+    history: '',
+    downloaded: ''
+  });
+
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedBhajan, setSelectedBhajan] = useState<Bhajan | null>(null);
   const [isNewBhajan, setIsNewBhajan] = useState(false);
   
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<AppTab>('songs');
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -102,6 +113,13 @@ export const App: React.FC = () => {
   // Scroll Management
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef(0);
+
+  // Derived current search query
+  const searchQuery = tabQueries[activeTab] || '';
+
+  const setSearchQuery = (val: string) => {
+      setTabQueries(prev => ({ ...prev, [activeTab]: val }));
+  };
 
   // --- NAVIGATION & HISTORY HANDLING ---
   
@@ -278,11 +296,13 @@ export const App: React.FC = () => {
       
       setSelectedBhajan(lectureAsBhajan);
       setIsNewBhajan(false);
+      setIsSearchFocused(false);
       pushHistoryState('reader');
   };
 
   const handleOpenBook = (book: Book) => {
       addToHistory(book.id, 'book');
+      setIsSearchFocused(false);
       if (book.url) {
           window.open(book.url, '_blank');
       } else {
@@ -549,6 +569,7 @@ export const App: React.FC = () => {
 
   // --- FILTERING LOGIC ---
 
+  // 1. Songs Filter
   const filteredBhajans = useMemo(() => {
     if (!debouncedQuery.trim()) return bhajans;
     
@@ -563,10 +584,46 @@ export const App: React.FC = () => {
     return matches.map(m => m.bhajan);
   }, [bhajans, debouncedQuery, script]);
 
-  const suggestions = useMemo(() => {
-    if (!searchQuery.trim() || !isSearchFocused) return [];
-    return filteredBhajans.slice(0, 6);
-  }, [filteredBhajans, searchQuery, isSearchFocused]);
+  // 2. Books Filter
+  const filteredBooks = useMemo(() => {
+    if (!debouncedQuery.trim()) return BOOKS_DATA;
+    
+    const scored = BOOKS_DATA.map(b => ({
+      book: b,
+      score: calculateBookScore(b, debouncedQuery)
+    }));
+
+    return scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.book);
+  }, [debouncedQuery]);
+
+  // 3. Lectures Filter
+  const filteredLectures = useMemo(() => {
+    if (!debouncedQuery.trim()) return LECTURES_DATA;
+
+    const scored = LECTURES_DATA.map(l => ({
+      lecture: l,
+      score: calculateLectureScore(l, debouncedQuery)
+    }));
+
+    return scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.lecture);
+  }, [debouncedQuery]);
+
+  // Dynamic Placeholder
+  const searchPlaceholder = useMemo(() => {
+      switch(activeTab) {
+          case 'books': return "Search books...";
+          case 'lectures': return "Search lectures...";
+          case 'history': return "Search history..."; 
+          case 'downloaded': return "Search downloads...";
+          default: return "Search bhajans...";
+      }
+  }, [activeTab]);
 
   if (isLoading) return <SplashScreen />;
 
@@ -671,7 +728,7 @@ export const App: React.FC = () => {
               <div className="relative group">
                  <input
                     type="text"
-                    placeholder="Search bhajans..."
+                    placeholder={searchPlaceholder}
                     className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 border-none focus:ring-2 focus:ring-white/50 rounded-full py-2 pl-10 pr-10 shadow-inner h-10 outline-none"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -688,40 +745,6 @@ export const App: React.FC = () => {
                    </button>
                  )}
               </div>
-
-              {isSearchFocused && searchQuery && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden border border-slate-100 dark:border-slate-700 animate-fade-in-up">
-                  <ul>
-                    {suggestions.map((bhajan) => {
-                      const matchedLine = getMatchingSnippet(bhajan, debouncedQuery, script);
-                      return (
-                        <li key={bhajan.id}>
-                          <button
-                            onClick={() => handleOpenReader(bhajan)}
-                            className="w-full text-left px-4 py-3 hover:bg-saffron-50 dark:hover:bg-slate-700 transition-colors flex flex-col border-b border-slate-100 dark:border-slate-700 last:border-0"
-                          >
-                             <span className="font-hindi text-slate-800 dark:text-slate-200 font-bold truncate w-full">
-                                <HighlightText text={script === 'iast' ? bhajan.titleIAST : bhajan.title} highlight={debouncedQuery} />
-                             </span>
-                             {matchedLine ? (
-                               <div className="flex items-center gap-1 mt-1">
-                                  <span className="shrink-0 text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1 rounded uppercase font-bold tracking-wider">Line</span>
-                                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate w-full italic">
-                                      <HighlightText text={matchedLine} highlight={debouncedQuery} />
-                                  </span>
-                               </div>
-                             ) : (
-                               <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 w-full font-hindi">
-                                  {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
-                               </span>
-                             )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
            </div>
 
            <button onClick={handleOpenSettings} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0">
@@ -755,13 +778,18 @@ export const App: React.FC = () => {
          )}
 
          {activeTab === 'books' && (
-            <BookList books={BOOKS_DATA} onSelect={handleOpenBook} />
+            <BookList 
+                books={filteredBooks} 
+                onSelect={handleOpenBook} 
+                searchQuery={debouncedQuery}
+            />
          )}
 
          {activeTab === 'lectures' && (
             <LectureList 
-               lectures={LECTURES_DATA} 
+               lectures={filteredLectures} 
                onSelect={handleOpenLecture}
+               searchQuery={debouncedQuery}
             />
          )}
 
@@ -819,7 +847,7 @@ export const App: React.FC = () => {
                                          className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                                       >
                                          <div className="shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                            <FileText size={18} />
+                                            <BookOpen size={18} />
                                          </div>
                                          <div className="min-w-0 flex-1">
                                             <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
@@ -842,7 +870,7 @@ export const App: React.FC = () => {
                                          className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                                       >
                                          <div className="shrink-0 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                                            <Headphones size={18} />
+                                            <Mic size={18} />
                                          </div>
                                          <div className="min-w-0 flex-1">
                                             <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">

@@ -1,15 +1,27 @@
 
 import React from 'react';
 import { Book } from '../types';
-import { FileText, Download, ExternalLink } from 'lucide-react';
+import { FileText, Download, ExternalLink, SearchX } from 'lucide-react';
+import { HighlightText } from './HighlightText';
 
 interface BookListProps {
   books: Book[];
   onSelect: (book: Book) => void;
+  searchQuery?: string;
 }
 
-export const BookList: React.FC<BookListProps> = ({ books, onSelect }) => {
+export const BookList: React.FC<BookListProps> = ({ books, onSelect, searchQuery = '' }) => {
   
+  if (books.length === 0) {
+      return (
+          <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 p-8 text-center animate-fade-in-up">
+              <SearchX className="w-16 h-16 opacity-30 mb-4" />
+              <p className="text-lg font-medium">No books found</p>
+              {searchQuery && <p className="text-sm opacity-70 mt-2">Try a different search term</p>}
+          </div>
+      );
+  }
+
   return (
     <div className="pb-24 pt-2 px-2">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
@@ -36,10 +48,10 @@ export const BookList: React.FC<BookListProps> = ({ books, onSelect }) => {
                         
                         <div className="flex-1 min-w-0">
                             <h3 className="font-hindi font-bold text-slate-800 dark:text-slate-200 text-base leading-snug group-hover:text-saffron-700 dark:group-hover:text-saffron-400 transition-colors">
-                                {book.title}
+                                <HighlightText text={book.title} highlight={searchQuery} />
                             </h3>
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
-                                {book.fileName}
+                                <HighlightText text={book.fileName} highlight={searchQuery} />
                             </p>
                         </div>
 

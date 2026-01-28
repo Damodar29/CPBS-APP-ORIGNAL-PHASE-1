@@ -1,14 +1,27 @@
 
 import React from 'react';
 import { LectureData } from '../types';
-import { Mic, Calendar, Headphones } from 'lucide-react';
+import { Mic, Calendar, Headphones, SearchX } from 'lucide-react';
+import { HighlightText } from './HighlightText';
 
 interface LectureListProps {
   lectures: LectureData[];
   onSelect: (lecture: LectureData) => void;
+  searchQuery?: string;
 }
 
-export const LectureList: React.FC<LectureListProps> = ({ lectures, onSelect }) => {
+export const LectureList: React.FC<LectureListProps> = ({ lectures, onSelect, searchQuery = '' }) => {
+  
+  if (lectures.length === 0) {
+      return (
+          <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 p-8 text-center animate-fade-in-up">
+              <SearchX className="w-16 h-16 opacity-30 mb-4" />
+              <p className="text-lg font-medium">No lectures found</p>
+              {searchQuery && <p className="text-sm opacity-70 mt-2">Try a different search term</p>}
+          </div>
+      );
+  }
+
   return (
     <div className="pb-24 pt-2 px-2">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
@@ -35,12 +48,12 @@ export const LectureList: React.FC<LectureListProps> = ({ lectures, onSelect }) 
                         
                         <div className="flex-1 min-w-0">
                             <h3 className="font-hindi font-bold text-slate-800 dark:text-slate-200 text-base leading-snug group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
-                                {lecture.title}
+                                <HighlightText text={lecture.title} highlight={searchQuery} />
                             </h3>
                             <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 dark:text-slate-500">
                                 {lecture.date && (
                                     <span className="flex items-center gap-1">
-                                        <Calendar size={10} /> {lecture.date}
+                                        <Calendar size={10} /> <HighlightText text={lecture.date} highlight={searchQuery} />
                                     </span>
                                 )}
                                 <span className="truncate">
@@ -51,11 +64,6 @@ export const LectureList: React.FC<LectureListProps> = ({ lectures, onSelect }) 
                     </button>
                 </li>
             ))}
-            {lectures.length === 0 && (
-                <li className="p-8 text-center text-slate-400 text-sm">
-                    No lectures available at the moment.
-                </li>
-            )}
         </ul>
       </div>
     </div>
