@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, ImageOff, RefreshCw, WifiOff } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, WifiOff, Maximize2, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface DailyQuotesProps {
   onBack: () => void;
@@ -11,6 +11,10 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
   const [imageError, setImageError] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0); // Used to force reload URL
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Lightbox State
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // Month names in Hindi to match data keys (for display)
   const HINDI_MONTHS = [
@@ -18,44 +22,37 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
     "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"
   ];
 
-  const formatDateKey = (date: Date): string => {
+  const WEEKDAYS = [
+      "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+  ];
+
+  const formatDateDisplay = (date: Date): string => {
     const day = date.getDate();
     const monthIndex = date.getMonth();
     return `${day} ${HINDI_MONTHS[monthIndex]}`;
+  };
+
+  const formatYearDayDisplay = (date: Date): string => {
+      return `${date.getFullYear()} ${WEEKDAYS[date.getDay()]}`;
   };
 
   // --- DYNAMIC IMAGE URL GENERATION ---
   const CLOUD_NAME = "drlnfmqrh";
   
   // Calculate Day of Year (1 - 366) based on a LEAP YEAR (e.g. 2024)
-  // This ensures March 1st is ALWAYS Day 61, preserving the 1-366 mapping across all years.
   const getStaticDayOfYear = (date: Date) => {
-    // We map the selected date to the year 2024 (a leap year)
-    // This handles the index consistency.
     const month = date.getMonth();
     const day = date.getDate();
-    
-    // Create date object for the same day in 2024
     const leapYearDate = new Date(2024, month, day);
-    const start = new Date(2024, 0, 0); // Dec 31, 2023
+    const start = new Date(2024, 0, 0); 
     const diff = leapYearDate.getTime() - start.getTime();
     const oneDay = 1000 * 60 * 60 * 24;
     return Math.floor(diff / oneDay);
   };
 
-  // Generates URL based on Day of Year
-  // Jan 1 -> 1.jpg
-  // Feb 29 -> 1-60.jpg
-  // Mar 1 -> 1-61.jpg (Always, even in non-leap years)
   const getQuoteImageUrl = (date: Date) => {
     const dayOfYear = getStaticDayOfYear(date);
-    
-    // Exception for Day 1 (1.jpg)
-    // For all other days: 1-{DayOfYear}.jpg
     const fileName = dayOfYear === 1 ? "1.jpg" : `1-${dayOfYear}.jpg`;
-    
-    // Append version param (v=2) to force cache refresh for updated images
-    // Append retryTrigger to URL to bypass browser cache on retry
     return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${fileName}?v=2&retry=${retryTrigger}`;
   };
 
@@ -78,13 +75,34 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
   const handleRetry = () => {
       setIsLoading(true);
       setImageError(false);
-      setRetryTrigger(prev => prev + 1); // Changes URL query param to force reload
+      setRetryTrigger(prev => prev + 1);
+  };
+
+  const openLightbox = () => {
+      if (!imageError) {
+          setZoomLevel(1);
+          setIsLightboxOpen(true);
+      }
+  };
+
+  const closeLightbox = () => {
+      setIsLightboxOpen(false);
+  };
+
+  const handleZoomIn = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setZoomLevel(prev => Math.min(prev + 0.5, 4));
+  };
+
+  const handleZoomOut = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setZoomLevel(prev => Math.max(prev - 0.5, 0.5));
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-saffron-50 dark:bg-slate-900 flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col animate-in slide-in-from-right duration-300">
       
-      {/* Header */}
+      {/* Header - Matches Screenshot Orange */}
       <div className="flex-none bg-saffron-500 text-white p-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between shadow-md z-10">
         <div className="flex items-center gap-3">
             <button onClick={onBack} className="p-1 hover:bg-white/10 rounded-full transition-colors">
@@ -94,49 +112,47 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
         </div>
         <button 
            onClick={handleToday}
-           className="text-xs font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full backdrop-blur-sm transition-colors"
+           className="text-xs font-bold bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm transition-colors"
         >
             आज (Today)
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] flex flex-col items-center">
           
-          {/* Navigation Bar */}
-          <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-saffron-100 dark:border-slate-700 mb-6">
+          {/* Date Navigation Pill - Matches Screenshot (Dark rounded bar) */}
+          <div className="w-full max-w-md bg-slate-800 rounded-full p-2 px-4 flex items-center justify-between shadow-lg mb-8 mt-4 border border-slate-700">
               <button 
                  onClick={() => changeDate(-1)}
-                 className="p-3 hover:bg-saffron-50 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
+                 className="p-2 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
               >
                   <ChevronLeft size={24} />
               </button>
               
               <div className="flex flex-col items-center">
-                  <span className="text-lg font-bold text-saffron-700 dark:text-saffron-400 font-hindi">
-                      {formatDateKey(currentDate)}
+                  <span className="text-xl font-bold text-saffron-500 font-hindi leading-none mb-1">
+                      {formatDateDisplay(currentDate)}
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">
-                      {currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric' })}
+                  <span className="text-xs text-slate-400 font-sans tracking-wide">
+                      {formatYearDayDisplay(currentDate)}
                   </span>
               </div>
 
               <button 
                  onClick={() => changeDate(1)}
-                 className="p-3 hover:bg-saffron-50 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
+                 className="p-2 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
               >
                   <ChevronRight size={24} />
               </button>
           </div>
 
-          {/* Quote Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden border border-saffron-100 dark:border-slate-700 relative min-h-[400px]">
-              {/* Decorative Header Pattern */}
-              <div className="h-2 bg-gradient-to-r from-saffron-400 to-red-500" />
+          {/* Main Card - Dark Background matching "Black Outline" */}
+          <div className="w-full max-w-md bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800 relative mt-8">
               
-              <div className="p-6 pt-8 text-center relative">
-                  {/* Maharaj Image - Adjusted position (-mt-6) so face is visible */}
-                  <div className="w-32 h-32 mx-auto rounded-full border-4 border-white dark:border-slate-700 shadow-xl overflow-hidden -mt-6 bg-saffron-100 mb-6 relative z-10">
+              {/* Maharaj Image - Positioned overlapping top */}
+              <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-20">
+                  <div className="w-24 h-24 rounded-full border-4 border-slate-900 shadow-xl overflow-hidden bg-saffron-100">
                       <img 
                         src="https://res.cloudinary.com/drlnfmqrh/image/upload/v1769567914/Screenshot_2026-01-28_080815_oegm4g.png" 
                         alt="Maharaj Ji" 
@@ -146,53 +162,114 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
                         }}
                       />
                   </div>
+              </div>
 
+              {/* Quote Image Container */}
+              <div className="mt-10 relative min-h-[300px] flex items-center justify-center bg-slate-900 rounded-xl overflow-hidden group">
                   {!imageError ? (
-                      <div className="relative mb-4 min-h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-lg">
-                          {isLoading && (
-                              <div className="absolute inset-0 flex items-center justify-center z-0">
-                                  <div className="w-8 h-8 border-4 border-saffron-200 border-t-saffron-500 rounded-full animate-spin"></div>
-                              </div>
-                          )}
-                          <img 
+                      <>
+                        {isLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center z-0">
+                                <div className="w-8 h-8 border-4 border-slate-700 border-t-saffron-500 rounded-full animate-spin"></div>
+                            </div>
+                        )}
+                        <img 
                             src={quoteImage} 
-                            alt={`Quote for ${formatDateKey(currentDate)}`} 
-                            className={`w-full h-auto rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 relative z-10 transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                            alt={`Quote for ${formatDateDisplay(currentDate)}`} 
+                            onClick={openLightbox}
+                            className={`w-full h-auto rounded-xl shadow-inner relative z-10 transition-all duration-300 cursor-zoom-in ${isLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                             onLoad={() => setIsLoading(false)}
                             onError={() => {
                                 setImageError(true);
                                 setIsLoading(false);
                             }}
-                          />
-                      </div>
+                        />
+                        {!isLoading && (
+                             <button 
+                                onClick={openLightbox}
+                                className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-20 shadow-lg"
+                                title="Zoom Image"
+                             >
+                                <Maximize2 size={20} />
+                             </button>
+                        )}
+                      </>
                   ) : (
-                      <div className="py-12 text-slate-400 flex flex-col items-center justify-center">
-                          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
-                             <WifiOff className="w-8 h-8 opacity-40 text-slate-500" />
-                          </div>
-                          <p className="mb-2 text-lg font-medium text-slate-600 dark:text-slate-300">Image not loaded</p>
-                          <p className="text-xs opacity-70 text-center px-8 mb-6 max-w-xs">
-                             Please check your internet connection or try again.
-                          </p>
-                          
+                      <div className="py-12 text-slate-500 flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-800 rounded-xl">
+                          <WifiOff className="w-10 h-10 opacity-50 mb-4" />
+                          <p className="text-sm font-medium text-slate-400">Image not available</p>
                           <button 
                              onClick={handleRetry}
-                             className="flex items-center gap-2 bg-saffron-500 hover:bg-saffron-600 text-white px-6 py-2 rounded-full font-bold shadow-md transition-all active:scale-95"
+                             className="mt-4 flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-saffron-400 px-4 py-2 rounded-full text-xs font-bold transition-colors"
                           >
-                             <RefreshCw size={18} /> Retry
+                             <RefreshCw size={14} /> Retry
                           </button>
-
-                          <div className="mt-6">
-                            <p className="text-[10px] font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-slate-500">
-                                    File: {quoteImage.split('/').pop()?.split('?')[0]}
-                            </p>
-                          </div>
                       </div>
                   )}
               </div>
           </div>
-
+          
       </div>
+
+      {/* Zoom Lightbox */}
+      {isLightboxOpen && (
+          <div className="fixed inset-0 z-[60] bg-black/95 flex flex-col animate-in fade-in duration-200">
+              
+              {/* Toolbar */}
+              <div className="flex-none p-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between bg-black/50 backdrop-blur-sm z-20">
+                  <div className="text-white/80 text-sm font-medium">
+                      {formatDateDisplay(currentDate)}
+                  </div>
+                  <button 
+                      onClick={closeLightbox}
+                      className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                  >
+                      <X size={24} />
+                  </button>
+              </div>
+
+              {/* Scrollable Image Area */}
+              <div className="flex-1 overflow-auto flex items-center justify-center p-4" onClick={closeLightbox}>
+                   <img 
+                      src={quoteImage}
+                      alt="Full Quote"
+                      onClick={(e) => e.stopPropagation()}
+                      className="transition-all duration-200 ease-out shadow-2xl"
+                      style={{ 
+                          width: `${zoomLevel * 100}%`,
+                          maxWidth: 'none',
+                          objectFit: 'contain'
+                      }}
+                   />
+              </div>
+
+              {/* Bottom Controls */}
+              <div className="flex-none p-6 pb-[calc(2rem+env(safe-area-inset-bottom))] flex justify-center z-20 pointer-events-none">
+                  <div className="flex items-center gap-6 bg-slate-800/90 backdrop-blur-md px-6 py-3 rounded-full shadow-2xl border border-slate-700 pointer-events-auto">
+                      <button 
+                          onClick={handleZoomOut}
+                          disabled={zoomLevel <= 0.5}
+                          className="text-white hover:text-saffron-400 disabled:opacity-30 transition-colors"
+                      >
+                          <ZoomOut size={28} />
+                      </button>
+                      
+                      <span className="text-white font-mono font-bold w-12 text-center select-none">
+                          {Math.round(zoomLevel * 100)}%
+                      </span>
+
+                      <button 
+                          onClick={handleZoomIn}
+                          disabled={zoomLevel >= 4}
+                          className="text-white hover:text-saffron-400 disabled:opacity-30 transition-colors"
+                      >
+                          <ZoomIn size={28} />
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };

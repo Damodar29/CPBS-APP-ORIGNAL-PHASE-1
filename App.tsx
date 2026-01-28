@@ -22,7 +22,7 @@ import { DailyQuotes } from './components/DailyQuotes';
 import { CategoryList } from './components/CategoryList';
 
 // Increment this version when logic changes to force client update
-const DATA_VERSION = '14';
+const DATA_VERSION = '15';
 
 export const App: React.FC = () => {
   // --- STATE ---
@@ -101,7 +101,7 @@ export const App: React.FC = () => {
     isAboutOpen,
     isDonateOpen,
     isSideMenuOpen,
-    isSearchFocused,
+    isSearchFocused, 
     isDailyQuotesOpen,
     activeTab
   });
@@ -341,6 +341,13 @@ export const App: React.FC = () => {
 
   // --- EFFECTS ---
   
+  // Safety: Redirect from Authors tab if not in Dev Mode
+  useEffect(() => {
+    if (!devMode && activeTab === 'authors') {
+      setActiveTab('songs');
+    }
+  }, [devMode, activeTab]);
+
   useEffect(() => {
       const handler = setTimeout(() => {
           setDebouncedQuery(searchQuery);
@@ -604,11 +611,11 @@ export const App: React.FC = () => {
       )}
 
       {activeTab === 'downloaded' && (
-          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900 animate-in slide-in-from-right duration-200">
+          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900">
               <DownloadedList 
                   allBhajans={bhajans} 
                   onSelect={handleOpenReader} 
-                  onBack={goBack}
+                  onBack={() => setActiveTab('songs')}
                   script={script}
               />
           </div>
@@ -700,7 +707,7 @@ export const App: React.FC = () => {
             />
          )}
 
-         {activeTab === 'authors' && (
+         {activeTab === 'authors' && devMode && (
             <CategoryList 
                bhajans={filteredBhajans}
                onSelect={handleOpenReader}
@@ -822,6 +829,7 @@ export const App: React.FC = () => {
       <BottomNav 
         activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} 
         onTabChange={handleTabChange} 
+        devMode={devMode}
       />
     </div>
   );

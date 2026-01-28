@@ -259,8 +259,7 @@ const extractAuthor = (content: string): { deva: string, iast: string } | undefi
     'बृज निधि': { deva: 'बृज निधि जी', iast: 'Bṛja Nidhi Jī' },
     'बनवारी': { deva: 'बनवारीदास जी', iast: 'Banavārīdās Jī' },
     'लोकनाथ': { deva: 'लोकनाथ दास गोस्वामीजी', iast: 'Lokanātha Dāsa Gosvāmījī' },
-    'देवकीनंदन': { deva: 'देवकीनंदनदास जी', iast: 'Devakīnandanadās Jī' },
-    'श्यामा': { deva: 'श्यामा जी', iast: 'Śyāmā Jī' }
+    'देवकीनंदन': { deva: 'देवकीनंदनदास जी', iast: 'Devakīnandanadās Jī' }
   };
 
   const quoteMatch = lastLines.match(/['‘’]([^'‘’]+)['‘’]/);
@@ -479,7 +478,7 @@ export const parseRawBhajanText = (rawText: string): Bhajan[] => {
             if (songNumber) {
                  if (songNumber === '51') {
                      authorData = { deva: 'मीराबाई जी', iast: 'Mīrābāī Jī' };
-                 } else if (['88', '115', '189', '193', '229', '230', '285', '288'].includes(songNumber)) {
+                 } else if (['88', '101', '115', '189', '193', '229', '230', '285', '288'].includes(songNumber)) {
                      authorData = undefined;
                  }
             }
