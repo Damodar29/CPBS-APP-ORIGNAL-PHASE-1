@@ -4,9 +4,10 @@ import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, WifiOff, Maximize2, X,
 
 interface DailyQuotesProps {
   onBack: () => void;
+  scrollBarSide?: 'left' | 'right';
 }
 
-export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
+export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack, scrollBarSide = 'left' }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [imageError, setImageError] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0); // Used to force reload URL
@@ -118,8 +119,9 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
         </button>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] flex flex-col items-center">
+      {/* Content Area - Scrollbar Applied */}
+      <div className={`flex-1 overflow-y-auto ${scrollBarSide === 'left' ? 'left-scrollbar' : ''}`}>
+        <div dir={scrollBarSide === 'left' ? 'ltr' : undefined} className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] flex flex-col items-center min-h-full">
           
           {/* Date Navigation Pill - Matches Screenshot (Dark rounded bar) */}
           <div className="w-full max-w-md bg-slate-800 rounded-full p-2 px-4 flex items-center justify-between shadow-lg mb-8 mt-4 border border-slate-700">
@@ -209,6 +211,7 @@ export const DailyQuotes: React.FC<DailyQuotesProps> = ({ onBack }) => {
               </div>
           </div>
           
+        </div>
       </div>
 
       {/* Zoom Lightbox */}

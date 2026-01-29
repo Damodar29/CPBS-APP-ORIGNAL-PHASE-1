@@ -19,6 +19,7 @@ interface BhajanReaderProps {
   onSave?: (id: string, title: string, content: string) => void;
   onDelete?: (id: string) => void;
   autoEdit?: boolean;
+  scrollBarSide?: 'left' | 'right'; // New prop
 }
 
 export const BhajanReader: React.FC<BhajanReaderProps> = ({ 
@@ -34,7 +35,8 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
   devMode,
   onSave,
   onDelete,
-  autoEdit = false
+  autoEdit = false,
+  scrollBarSide = 'left'
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -287,15 +289,15 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
             )}
         </div>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
             {/* Share Button */}
             {!isEditing && (
                 <button 
                     onClick={handleShare}
-                    className="p-2.5 text-slate-500 hover:text-saffron-600 dark:text-slate-400 dark:hover:text-saffron-400 transition-colors rounded-full hover:bg-saffron-50 dark:hover:bg-slate-800"
+                    className="p-3 text-slate-500 hover:text-saffron-600 dark:text-slate-400 dark:hover:text-saffron-400 transition-colors rounded-full hover:bg-saffron-50 dark:hover:bg-slate-800"
                     title="Share"
                 >
-                    <Share2 className="w-5 h-5" />
+                    <Share2 className="w-6 h-6" />
                 </button>
             )}
 
@@ -303,10 +305,10 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
             {!isEditing && !navigator.share && (
                 <button 
                     onClick={handleCopy}
-                    className="p-2.5 text-slate-500 hover:text-saffron-600 dark:text-slate-400 dark:hover:text-saffron-400 transition-colors rounded-full hover:bg-saffron-50 dark:hover:bg-slate-800"
+                    className="p-3 text-slate-500 hover:text-saffron-600 dark:text-slate-400 dark:hover:text-saffron-400 transition-colors rounded-full hover:bg-saffron-50 dark:hover:bg-slate-800"
                     title="Copy Text"
                 >
-                    {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                    {copied ? <Check className="w-6 h-6 text-green-500" /> : <Copy className="w-6 h-6" />}
                 </button>
             )}
 
@@ -315,16 +317,16 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
               <>
                  <button 
                     onClick={isEditing ? handleSaveEdit : () => setIsEditing(true)}
-                    className={`p-2 rounded-full transition-colors ${isEditing ? 'bg-green-100 text-green-700' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                    className={`p-3 rounded-full transition-colors ${isEditing ? 'bg-green-100 text-green-700' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                   >
-                    {isEditing ? <Save className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
+                    {isEditing ? <Save className="w-6 h-6" /> : <Edit2 className="w-6 h-6" />}
                   </button>
                   {isEditing && onDelete && (
                       <button 
                       onClick={() => onDelete(bhajan.id)}
-                      className="p-2 rounded-full transition-colors bg-red-50 text-red-600 hover:bg-red-100"
+                      className="p-3 rounded-full transition-colors bg-red-50 text-red-600 hover:bg-red-100"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-6 h-6" />
                     </button>
                   )}
               </>
@@ -333,22 +335,22 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
             {/* Theme Toggle */}
             <button 
               onClick={onToggleTheme} 
-              className="w-10 h-10 rounded-full bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors"
+              className="p-3 rounded-full bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors"
             >
-               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+               {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
             </button>
 
             {/* Font Control Toggle */}
             <button 
                onClick={() => setShowFontPanel(!showFontPanel)}
-               className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showFontPanel ? 'bg-saffron-100 text-saffron-700 dark:bg-saffron-900/30 dark:text-saffron-400' : 'bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+               className={`p-3 rounded-full flex items-center justify-center transition-colors ${showFontPanel ? 'bg-saffron-100 text-saffron-700 dark:bg-saffron-900/30 dark:text-saffron-400' : 'bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
-               <Type className="w-5 h-5" />
+               <Type className="w-6 h-6" />
             </button>
         </div>
       </div>
 
-      {/* Font Settings Panel Overlay */}
+      {/* Font Settings Panel Overlay - Positioned Right */}
       {showFontPanel && (
           <div className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-2 z-30 animate-in slide-in-from-top-2 fade-in duration-200">
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-4 w-72">
@@ -391,10 +393,10 @@ export const BhajanReader: React.FC<BhajanReaderProps> = ({
       {/* Reader Content */}
       <div 
         ref={contentRef} 
-        className={`flex-1 overflow-y-auto overflow-x-hidden scroll-smooth relative z-10 ${hasAudio ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}
+        className={`flex-1 overflow-y-auto overflow-x-hidden scroll-smooth relative z-10 ${scrollBarSide === 'left' ? 'left-scrollbar' : ''} ${hasAudio ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}
         onClick={() => { if(showFontPanel) setShowFontPanel(false); }}
       >
-        <div className="max-w-2xl mx-auto min-h-full flex flex-col p-4 sm:p-6 lg:p-8">
+        <div dir={scrollBarSide === 'left' ? 'ltr' : undefined} className="max-w-2xl mx-auto min-h-full flex flex-col p-4 sm:p-6 lg:p-8">
             
             {/* Title Section (Visible initially) */}
             {!isEditing && (

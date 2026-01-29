@@ -24,6 +24,7 @@ import { BookList } from './components/BookList';
 import { DownloadedList } from './components/DownloadedList';
 import { LectureList } from './components/LectureList';
 import { DailyQuotes } from './components/DailyQuotes';
+import { EventsScreen } from './components/EventsScreen';
 import { CategoryList } from './components/CategoryList';
 import { QuotePopup } from './components/QuotePopup';
 
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [isDailyQuotesOpen, setIsDailyQuotesOpen] = useState(false);
+  const [isEventsOpen, setIsEventsOpen] = useState(false);
   
   // Daily Quote Popup State
   const [showQuotePopup, setShowQuotePopup] = useState(false);
@@ -88,10 +90,16 @@ export const App: React.FC = () => {
      return (localStorage.getItem('cpbs_settings_lang') as 'en' | 'hi') || 'en';
   });
 
+  // Layout Settings
+  const [scrollBarSide, setScrollBarSide] = useState<'left' | 'right'>(() => (localStorage.getItem('cpbs_scrollbar_side') as 'left' | 'right') || 'left');
+  const [azSliderSide, setAzSliderSide] = useState<'left' | 'right'>(() => (localStorage.getItem('cpbs_slider_side') as 'left' | 'right') || 'left');
+
   const [devMode, setDevMode] = useState<boolean>(false);
 
-  // Sorting State
-  const [indexMode, setIndexMode] = useState<'latin' | 'devanagari'>('devanagari');
+  // Sorting State - Now persisted
+  const [indexMode, setIndexMode] = useState<'latin' | 'devanagari'>(() => {
+      return (localStorage.getItem('cpbs_index_mode') as 'latin' | 'devanagari') || 'devanagari';
+  });
 
   // History State - Migrated to Object Array
   const [historyItems, setHistoryItems] = useState<HistoryEntry[]>(() => {
@@ -127,11 +135,12 @@ export const App: React.FC = () => {
   const stateRef = useRef({ 
     hasSelectedBhajan: !!selectedBhajan, 
     isSettingsOpen, 
-    isAboutOpen,
+    isAboutOpen, 
     isDonateOpen, 
     isSideMenuOpen, 
     isSearchFocused, 
     isDailyQuotesOpen,
+    isEventsOpen,
     showQuotePopup,
     activeTab
   });
@@ -146,10 +155,11 @@ export const App: React.FC = () => {
       isSideMenuOpen, 
       isSearchFocused, 
       isDailyQuotesOpen,
+      isEventsOpen,
       showQuotePopup,
       activeTab
     };
-  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab, isDailyQuotesOpen, showQuotePopup]);
+  }, [selectedBhajan, isSettingsOpen, isAboutOpen, isDonateOpen, isSideMenuOpen, isSearchFocused, activeTab, isDailyQuotesOpen, isEventsOpen, showQuotePopup]);
 
   // Push a new entry to history stack
   const pushHistoryState = (viewName: string) => {
@@ -169,7 +179,8 @@ export const App: React.FC = () => {
           isDonateOpen, 
           isSideMenuOpen, 
           isSearchFocused, 
-          isDailyQuotesOpen,
+          isDailyQuotesOpen, 
+          isEventsOpen,
           showQuotePopup,
           activeTab
       } = stateRef.current;
@@ -186,6 +197,10 @@ export const App: React.FC = () => {
       } 
       if (isDailyQuotesOpen) {
         setIsDailyQuotesOpen(false);
+        return true;
+      }
+      if (isEventsOpen) {
+        setIsEventsOpen(false);
         return true;
       }
       if (isDonateOpen) {
@@ -333,6 +348,12 @@ export const App: React.FC = () => {
     pushHistoryState('daily-quotes');
   };
 
+  const handleOpenEvents = () => {
+    setIsSideMenuOpen(false);
+    setIsEventsOpen(true);
+    pushHistoryState('events');
+  };
+
   const handleOpenMenu = () => {
     setIsSideMenuOpen(true);
     pushHistoryState('menu');
@@ -422,7 +443,7 @@ export const App: React.FC = () => {
     };
 
     // Check on Initial Mount (2.5s delay for splash)
-    checkDailyQuote(2500);
+    checkDailyQuote(2000);
 
     // Check on App Resume (1s delay)
     const handleVisibilityChange = () => {
@@ -432,7 +453,7 @@ export const App: React.FC = () => {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const MIN_SPLASH_DURATION = 1000; 
+    const MIN_SPLASH_DURATION = 1500; 
     const elapsed = Date.now() - startTime;
     const remainingTime = Math.max(0, MIN_SPLASH_DURATION - elapsed);
     const timer = setTimeout(() => setIsLoading(false), remainingTime);
@@ -459,6 +480,8 @@ export const App: React.FC = () => {
   useEffect(() => localStorage.setItem('cpbs_history', JSON.stringify(historyItems)), [historyItems]);
   useEffect(() => localStorage.setItem('cpbs_awake', String(keepAwake)), [keepAwake]);
   useEffect(() => localStorage.setItem('cpbs_settings_lang', settingsLanguage), [settingsLanguage]);
+  useEffect(() => localStorage.setItem('cpbs_scrollbar_side', scrollBarSide), [scrollBarSide]);
+  useEffect(() => localStorage.setItem('cpbs_slider_side', azSliderSide), [azSliderSide]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -481,6 +504,122 @@ export const App: React.FC = () => {
   const saveToStorage = (data: Bhajan[]) => {
     localStorage.setItem('cpbs_all_bhajans', JSON.stringify(data));
     setBhajans(data);
+  };
+
+  // Advanced Import Logic: Full Replace or Patch Merge
+  const handleImportData = (dataStr: string) => {
+      try {
+          const parsedData = JSON.parse(dataStr);
+          
+          // Case 1: Full Array (Complete Backup Restore)
+          if (Array.isArray(parsedData)) {
+              if (parsedData.length === 0) {
+                  alert("Imported data is empty.");
+                  return;
+              }
+              // Validate structure of first item
+              if (!parsedData[0].id || !parsedData[0].content) {
+                  alert("Invalid format: Not a list of songs.");
+                  return;
+              }
+              
+              if (window.confirm(`Found a Full Backup with ${parsedData.length} songs.\n\nThis will REPLACE all current data. Continue?`)) {
+                  saveToStorage(parsedData);
+                  alert("Database restored successfully!");
+                  return true;
+              }
+          } 
+          // Case 2: Patch Object { added, modified, deleted }
+          else if (parsedData.added || parsedData.modified || parsedData.deleted) {
+              const { added = [], modified = [], deleted = [] } = parsedData;
+              const count = added.length + modified.length + deleted.length;
+              
+              if (window.confirm(`Found Patch Data:\n+ ${added.length} New\n~ ${modified.length} Modified\n- ${deleted.length} Deleted\n\nApply these changes?`)) {
+                  let currentData = [...bhajans];
+                  
+                  // 1. Remove Deleted
+                  if (deleted.length > 0) {
+                      const deletedSet = new Set(deleted);
+                      currentData = currentData.filter(b => !deletedSet.has(b.id));
+                  }
+
+                  // 2. Apply Modifications
+                  if (modified.length > 0) {
+                      currentData = currentData.map(curr => {
+                          const mod = modified.find((m: any) => m.id === curr.id);
+                          if (mod) {
+                              // Merge fields, recalculate indices
+                              const newTitle = mod.title || curr.title;
+                              const newContent = mod.content || curr.content;
+                              const titleIAST = convertToIAST(newTitle);
+                              const contentIAST = convertToIAST(newContent);
+                              const combinedText = `${newTitle} ${newContent}`;
+                              const transliteratedText = transliterateForSearch(combinedText);
+                              const normalizedIndex = smartNormalize(transliteratedText);
+                              const numberMatch = newTitle.trim().match(/^(\d+)[\s\.\-\)]/);
+                              const songNumber = numberMatch ? numberMatch[1] : curr.songNumber;
+
+                              return {
+                                  ...curr,
+                                  title: newTitle,
+                                  titleIAST,
+                                  content: newContent,
+                                  contentIAST,
+                                  searchIndex: `${songNumber || ''} ${combinedText.toLowerCase()} ${normalizedIndex}`,
+                                  author: mod.author || curr.author, // Allow author update
+                                  songNumber
+                              };
+                          }
+                          return curr;
+                      });
+                  }
+
+                  // 3. Add New
+                  if (added.length > 0) {
+                       added.forEach((newSong: any) => {
+                          // Ensure we don't add duplicates by ID
+                          if (!currentData.find(b => b.id === newSong.id)) {
+                              const title = newSong.title || "Untitled";
+                              const content = newSong.content || "";
+                              const titleIAST = convertToIAST(title);
+                              const contentIAST = convertToIAST(content);
+                              const combinedText = `${title} ${content}`;
+                              const transliteratedText = transliterateForSearch(combinedText);
+                              const normalizedIndex = smartNormalize(transliteratedText);
+                              const numberMatch = title.trim().match(/^(\d+)[\s\.\-\)]/);
+                              const songNumber = numberMatch ? numberMatch[1] : undefined;
+
+                              const b: Bhajan = {
+                                  id: newSong.id || `custom-${Date.now()}-${Math.random()}`,
+                                  title,
+                                  titleIAST,
+                                  firstLine: content.split('\n')[0] || title,
+                                  firstLineIAST: convertToIAST(content.split('\n')[0] || title),
+                                  content,
+                                  contentIAST,
+                                  searchIndex: `${songNumber || ''} ${combinedText.toLowerCase()} ${normalizedIndex}`,
+                                  searchTokens: Array.from(new Set(transliteratedText.toLowerCase().split(/[\s,।॥!?-]+/).filter(t => t.length > 2).map(t => smartNormalize(t)))),
+                                  author: newSong.author,
+                                  authorIAST: newSong.author ? convertToIAST(newSong.author) : undefined,
+                                  songNumber
+                              };
+                              currentData.push(b);
+                          }
+                       });
+                  }
+                  
+                  saveToStorage(currentData);
+                  alert("Patch applied successfully!");
+                  return true;
+              }
+          } else {
+              alert("Unknown data format.");
+          }
+      } catch (e) {
+          console.error(e);
+          alert("Failed to import data. Invalid JSON.");
+      }
+      return false;
   };
 
   const handleUpdateBhajan = (id: string, newTitle: string, newContent: string) => {
@@ -639,6 +778,9 @@ export const App: React.FC = () => {
         onHome={handleGoHome}
         onOpenDownloaded={handleOpenDownloaded}
         onOpenDailyQuotes={handleOpenDailyQuotes}
+        onOpenEvents={handleOpenEvents}
+        scrollBarSide={scrollBarSide}
+        settingsLanguage={settingsLanguage}
       />
 
       <SettingsScreen 
@@ -654,11 +796,19 @@ export const App: React.FC = () => {
         onKeepAwakeChange={setKeepAwake}
         settingsLanguage={settingsLanguage}
         onSettingsLanguageChange={setSettingsLanguage}
+        
+        scrollBarSide={scrollBarSide}
+        onScrollBarSideChange={setScrollBarSide}
+        azSliderSide={azSliderSide}
+        onAzSliderSideChange={setAzSliderSide}
+        indexMode={indexMode}
+
         devMode={devMode}
         onDevModeChange={setDevMode}
         onResetData={handleResetData}
         onRestoreDeleted={handleRestoreDeleted}
         onAddBhajan={handleCreateBhajanWrapper}
+        onImportData={handleImportData}
         allBhajans={bhajans}
       />
       
@@ -666,15 +816,22 @@ export const App: React.FC = () => {
          isOpen={isAboutOpen}
          onClose={goBack}
          onOpenDonate={handleOpenDonate}
+         scrollBarSide={scrollBarSide}
+         settingsLanguage={settingsLanguage}
       />
 
       <DonateScreen 
          isOpen={isDonateOpen}
          onClose={goBack}
+         settingsLanguage={settingsLanguage}
       />
 
       {isDailyQuotesOpen && (
-        <DailyQuotes onBack={goBack} />
+        <DailyQuotes onBack={goBack} scrollBarSide={scrollBarSide} />
+      )}
+
+      {isEventsOpen && (
+        <EventsScreen onBack={goBack} scrollBarSide={scrollBarSide} settingsLanguage={settingsLanguage} />
       )}
 
       {showQuotePopup && (
@@ -703,16 +860,18 @@ export const App: React.FC = () => {
           onSave={handleUpdateBhajan}
           onDelete={handleDeleteBhajan}
           autoEdit={isNewBhajan}
+          scrollBarSide={scrollBarSide}
         />
       )}
 
       {activeTab === 'downloaded' && (
-          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900">
+          <div className="fixed inset-0 z-40 bg-white dark:bg-slate-900 animate-slide-in-bottom">
               <DownloadedList 
                   allBhajans={bhajans} 
                   onSelect={handleOpenReader} 
                   onBack={() => setActiveTab('songs')}
                   script={script}
+                  scrollBarSide={scrollBarSide}
               />
           </div>
       )}
@@ -720,7 +879,7 @@ export const App: React.FC = () => {
       {/* --- FIXED HEADER --- */}
       <header className="fixed top-0 left-0 right-0 z-30 bg-saffron-500 shadow-md transition-all duration-300 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2 p-2 h-16 max-w-3xl mx-auto">
-           <button onClick={handleOpenMenu} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0">
+           <button onClick={handleOpenMenu} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0 active:scale-90 transform duration-150">
               <Menu className="w-6 h-6" />
            </button>
            
@@ -729,7 +888,7 @@ export const App: React.FC = () => {
                  <input
                     type="text"
                     placeholder={searchPlaceholder}
-                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 border-none focus:ring-2 focus:ring-white/50 rounded-full py-2 pl-10 pr-10 shadow-inner h-10 outline-none"
+                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 border-none focus:ring-2 focus:ring-white/50 rounded-full py-2 pl-10 pr-10 shadow-inner h-10 outline-none transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
@@ -739,7 +898,7 @@ export const App: React.FC = () => {
                  {searchQuery && (
                    <button 
                       onClick={() => { setSearchQuery(''); setIsSearchFocused(true); }} 
-                      className="absolute right-2 top-1.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-all"
+                      className="absolute right-2 top-1.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-all animate-pop"
                     >
                      <X className="w-4 h-4" />
                    </button>
@@ -747,7 +906,7 @@ export const App: React.FC = () => {
               </div>
            </div>
 
-           <button onClick={handleOpenSettings} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0">
+           <button onClick={handleOpenSettings} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors shrink-0 active:scale-90 transform duration-150">
               <Settings className="w-6 h-6" />
            </button>
         </div>
@@ -756,147 +915,155 @@ export const App: React.FC = () => {
       {/* --- SCROLLABLE MAIN CONTENT --- */}
       <main 
         ref={mainScrollRef}
-        className="flex-1 overflow-y-auto w-full max-w-3xl mx-auto scroll-smooth pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] no-scrollbar-on-mobile"
+        className={`flex-1 overflow-y-auto w-full max-w-3xl mx-auto scroll-smooth pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] no-scrollbar-on-mobile ${scrollBarSide === 'left' ? 'left-scrollbar' : ''}`}
       >
-         {activeTab === 'songs' && (
-            <BhajanList 
-               bhajans={filteredBhajans}
-               onSelect={handleOpenReader}
-               searchQuery={debouncedQuery}
-               script={script}
-               indexMode={indexMode}
-               onIndexModeChange={setIndexMode}
-            />
-         )}
+         <div dir={scrollBarSide === 'left' ? 'ltr' : undefined} className="min-h-full">
+             {/* Main Content Areas with Fade In Transitions */}
+             <div key={activeTab} className="animate-fade-in">
+                 {activeTab === 'songs' && (
+                    <BhajanList 
+                       bhajans={filteredBhajans}
+                       onSelect={handleOpenReader}
+                       searchQuery={debouncedQuery}
+                       script={script}
+                       indexMode={indexMode}
+                       onIndexModeChange={setIndexMode}
+                       azSliderSide={azSliderSide}
+                    />
+                 )}
 
-         {activeTab === 'authors' && devMode && (
-            <CategoryList 
-               bhajans={filteredBhajans}
-               onSelect={handleOpenReader}
-               script={script}
-            />
-         )}
+                 {activeTab === 'authors' && devMode && (
+                    <CategoryList 
+                       bhajans={filteredBhajans}
+                       onSelect={handleOpenReader}
+                       script={script}
+                    />
+                 )}
 
-         {activeTab === 'books' && (
-            <BookList 
-                books={filteredBooks} 
-                onSelect={handleOpenBook} 
-                searchQuery={debouncedQuery}
-            />
-         )}
+                 {activeTab === 'books' && (
+                    <BookList 
+                        books={filteredBooks} 
+                        onSelect={handleOpenBook} 
+                        searchQuery={debouncedQuery}
+                    />
+                 )}
 
-         {activeTab === 'lectures' && (
-            <LectureList 
-               lectures={filteredLectures} 
-               onSelect={handleOpenLecture}
-               searchQuery={debouncedQuery}
-            />
-         )}
+                 {activeTab === 'lectures' && (
+                    <LectureList 
+                       lectures={filteredLectures} 
+                       onSelect={handleOpenLecture}
+                       searchQuery={debouncedQuery}
+                    />
+                 )}
 
-         {activeTab === 'history' && (
-            <div className="min-h-full bg-white dark:bg-slate-900">
-               {historyItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-slate-400">
-                     <History size={48} strokeWidth={1} className="mb-4 opacity-50" />
-                     <p>No recently viewed items</p>
-                  </div>
-               ) : (
-                  <>
-                     <div className="flex items-center justify-between px-4 py-3 bg-slate-50/95 dark:bg-slate-900/95 sticky top-0 border-b border-slate-100 dark:border-slate-800 backdrop-blur-sm z-10">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recently Viewed</span>
-                        <button 
-                           onClick={handleClearHistory}
-                           className="text-xs flex items-center gap-1 text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full transition-colors"
-                        >
-                           <Trash2 size={12} /> Clear
-                        </button>
-                     </div>
-                     <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {historyItems.map((item, idx) => {
-                           // Render Item based on type
-                           if (item.type === 'song') {
-                               const bhajan = bhajans.find(b => b.id === item.id);
-                               if (!bhajan) return null;
-                               return (
-                                   <li key={`${item.type}-${item.id}-${idx}`}>
-                                      <button
-                                         onClick={() => handleOpenReader(bhajan)}
-                                         className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                                      >
-                                         <div className="shrink-0 w-10 h-10 rounded-full bg-saffron-100 dark:bg-saffron-900/20 flex items-center justify-center text-saffron-600 dark:text-saffron-400">
-                                            <Music size={18} />
-                                         </div>
-                                         <div className="min-w-0 flex-1">
-                                            <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
-                                                {script === 'iast' ? bhajan.titleIAST : bhajan.title}
-                                            </div>
-                                            <div className="text-sm text-slate-500 mt-1 truncate font-hindi">
-                                                {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
-                                            </div>
-                                         </div>
-                                      </button>
-                                   </li>
-                               );
-                           } else if (item.type === 'book') {
-                               const book = BOOKS_DATA.find(b => b.id === item.id);
-                               if (!book) return null;
-                               return (
-                                   <li key={`${item.type}-${item.id}-${idx}`}>
-                                      <button
-                                         onClick={() => handleOpenBook(book)}
-                                         className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                                      >
-                                         <div className="shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                            <BookOpen size={18} />
-                                         </div>
-                                         <div className="min-w-0 flex-1">
-                                            <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
-                                                {book.title}
-                                            </div>
-                                            <div className="text-sm text-slate-500 mt-1 truncate">
-                                                PDF • {book.fileName}
-                                            </div>
-                                         </div>
-                                      </button>
-                                   </li>
-                               );
-                           } else if (item.type === 'lecture') {
-                               const lecture = LECTURES_DATA.find(l => l.id === item.id);
-                               if (!lecture) return null;
-                               return (
-                                   <li key={`${item.type}-${item.id}-${idx}`}>
-                                      <button
-                                         onClick={() => handleOpenLecture(lecture)}
-                                         className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                                      >
-                                         <div className="shrink-0 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                                            <Mic size={18} />
-                                         </div>
-                                         <div className="min-w-0 flex-1">
-                                            <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
-                                                {lecture.title}
-                                            </div>
-                                            <div className="text-sm text-slate-500 mt-1 truncate">
-                                                Lecture {lecture.date ? `• ${lecture.date}` : ''}
-                                            </div>
-                                         </div>
-                                      </button>
-                                   </li>
-                               );
-                           }
-                           return null;
-                        })}
-                     </ul>
-                  </>
-               )}
-            </div>
-         )}
+                 {activeTab === 'history' && (
+                    <div className="min-h-full bg-white dark:bg-slate-900">
+                       {historyItems.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-slate-400 animate-fade-in-up">
+                             <History size={48} strokeWidth={1} className="mb-4 opacity-50" />
+                             <p>No recently viewed items</p>
+                          </div>
+                       ) : (
+                          <>
+                             <div className="flex items-center justify-between px-4 py-3 bg-slate-50/95 dark:bg-slate-900/95 sticky top-0 border-b border-slate-100 dark:border-slate-800 backdrop-blur-sm z-10">
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recently Viewed</span>
+                                <button 
+                                   onClick={handleClearHistory}
+                                   className="text-xs flex items-center gap-1 text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full transition-colors active:scale-95"
+                                >
+                                   <Trash2 size={12} /> Clear
+                                </button>
+                             </div>
+                             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {historyItems.map((item, idx) => {
+                                   const delayStyle = { animationDelay: `${idx * 40}ms` };
+                                   // Render Item based on type
+                                   if (item.type === 'song') {
+                                       const bhajan = bhajans.find(b => b.id === item.id);
+                                       if (!bhajan) return null;
+                                       return (
+                                           <li key={`${item.type}-${item.id}-${idx}`} className="animate-fade-in-up opacity-0 fill-mode-forwards" style={delayStyle}>
+                                              <button
+                                                 onClick={() => handleOpenReader(bhajan)}
+                                                 className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 active:bg-saffron-100 dark:active:bg-slate-700"
+                                              >
+                                                 <div className="shrink-0 w-10 h-10 rounded-full bg-saffron-100 dark:bg-saffron-900/20 flex items-center justify-center text-saffron-600 dark:text-saffron-400">
+                                                    <Music size={18} />
+                                                 </div>
+                                                 <div className="min-w-0 flex-1">
+                                                    <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
+                                                        {script === 'iast' ? bhajan.titleIAST : bhajan.title}
+                                                    </div>
+                                                    <div className="text-sm text-slate-500 mt-1 truncate font-hindi">
+                                                        {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
+                                                    </div>
+                                                 </div>
+                                              </button>
+                                           </li>
+                                       );
+                                   } else if (item.type === 'book') {
+                                       const book = BOOKS_DATA.find(b => b.id === item.id);
+                                       if (!book) return null;
+                                       return (
+                                           <li key={`${item.type}-${item.id}-${idx}`} className="animate-fade-in-up opacity-0 fill-mode-forwards" style={delayStyle}>
+                                              <button
+                                                 onClick={() => handleOpenBook(book)}
+                                                 className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 active:bg-saffron-100 dark:active:bg-slate-700"
+                                              >
+                                                 <div className="shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                    <BookOpen size={18} />
+                                                 </div>
+                                                 <div className="min-w-0 flex-1">
+                                                    <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
+                                                        {book.title}
+                                                    </div>
+                                                    <div className="text-sm text-slate-500 mt-1 truncate">
+                                                        PDF • {book.fileName}
+                                                    </div>
+                                                 </div>
+                                              </button>
+                                           </li>
+                                       );
+                                   } else if (item.type === 'lecture') {
+                                       const lecture = LECTURES_DATA.find(l => l.id === item.id);
+                                       if (!lecture) return null;
+                                       return (
+                                           <li key={`${item.type}-${item.id}-${idx}`} className="animate-fade-in-up opacity-0 fill-mode-forwards" style={delayStyle}>
+                                              <button
+                                                 onClick={() => handleOpenLecture(lecture)}
+                                                 className="w-full text-left py-4 px-4 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 active:bg-saffron-100 dark:active:bg-slate-700"
+                                              >
+                                                 <div className="shrink-0 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                                    <Mic size={18} />
+                                                 </div>
+                                                 <div className="min-w-0 flex-1">
+                                                    <div className="font-hindi text-slate-800 dark:text-slate-200 font-bold text-lg leading-tight truncate">
+                                                        {lecture.title}
+                                                    </div>
+                                                    <div className="text-sm text-slate-500 mt-1 truncate">
+                                                        Lecture {lecture.date ? `• ${lecture.date}` : ''}
+                                                    </div>
+                                                 </div>
+                                              </button>
+                                           </li>
+                                       );
+                                   }
+                                   return null;
+                                })}
+                             </ul>
+                          </>
+                       )}
+                    </div>
+                 )}
+             </div>
+         </div>
       </main>
 
       <BottomNav 
         activeTab={activeTab === 'downloaded' ? 'songs' : activeTab} 
         onTabChange={handleTabChange} 
         devMode={devMode}
+        settingsLanguage={settingsLanguage}
       />
     </div>
   );

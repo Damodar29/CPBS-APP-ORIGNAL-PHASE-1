@@ -6,17 +6,18 @@ interface AzSliderProps {
   onSelect: (key: string) => void;
   indexMode: 'latin' | 'devanagari';
   onToggleMode: () => void;
+  side?: 'left' | 'right'; // New prop
 }
 
-export const AzSlider: React.FC<AzSliderProps> = ({ sortedKeys, onSelect, indexMode, onToggleMode }) => {
+export const AzSlider: React.FC<AzSliderProps> = ({ sortedKeys, onSelect, indexMode, onToggleMode, side = 'left' }) => {
   if (sortedKeys.length === 0) return null;
 
   return (
     // Adjusted top/bottom to account for Header (4rem) + safe area and BottomNav + safe area
     // Top: 4rem (header) + 1rem (spacing) + env(safe-area-inset-top)
     // Bottom: 4rem (footer) + 1rem (spacing) + env(safe-area-inset-bottom)
-    <div className="fixed top-[calc(5rem+env(safe-area-inset-top))] bottom-[calc(5rem+env(safe-area-inset-bottom))] right-0 z-20 flex flex-col items-end pointer-events-none">
-      <div className="h-full w-9 bg-saffron-50/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm border-l border-saffron-200 dark:border-slate-700 flex flex-col pointer-events-auto rounded-l-lg overflow-hidden">
+    <div className={`fixed top-[calc(5rem+env(safe-area-inset-top))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 flex flex-col items-start pointer-events-none ${side === 'left' ? 'left-0' : 'right-0 items-end'}`}>
+      <div className={`h-full w-9 bg-saffron-50/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm border-saffron-200 dark:border-slate-700 flex flex-col pointer-events-auto overflow-hidden ${side === 'left' ? 'border-r rounded-r-lg' : 'border-l rounded-l-lg'}`}>
         
         <button 
            onClick={(e) => {

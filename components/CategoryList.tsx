@@ -57,49 +57,52 @@ export const CategoryList: React.FC<CategoryListProps> = ({ bhajans, onSelect, s
 
   return (
     <div className="pb-24 pt-2">
-      {groupedData.keys.map(categoryKey => (
-        <div key={categoryKey} className="mb-2 bg-white dark:bg-slate-800 border-y border-slate-100 dark:border-slate-700">
-          <button
-            onClick={() => toggleCategory(categoryKey)}
-            className="w-full flex items-center justify-between p-4 hover:bg-saffron-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded-full bg-saffron-100 dark:bg-slate-700 text-saffron-600 dark:text-saffron-400 flex items-center justify-center">
-                 <User size={16} />
-               </div>
-               <div className="text-left">
-                  <h3 className="font-bold text-slate-800 dark:text-slate-100 font-hindi">
-                    {getCategoryDisplayName(categoryKey)}
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {groupedData.groups[categoryKey].length} {script === 'iast' ? 'Songs' : 'भजन'}
-                  </p>
-               </div>
-            </div>
-            <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${expandedCategory === categoryKey ? 'rotate-90' : ''}`} />
-          </button>
+      {groupedData.keys.map((categoryKey, index) => {
+        const delayStyle = { animationDelay: `${index * 30}ms` };
+        return (
+          <div key={categoryKey} className="mb-2 bg-white dark:bg-slate-800 border-y border-slate-100 dark:border-slate-700 animate-fade-in-up opacity-0 fill-mode-forwards" style={delayStyle}>
+            <button
+              onClick={() => toggleCategory(categoryKey)}
+              className="w-full flex items-center justify-between p-4 hover:bg-saffron-50 dark:hover:bg-slate-700 transition-colors active:bg-saffron-100"
+            >
+              <div className="flex items-center gap-3">
+                 <div className="w-8 h-8 rounded-full bg-saffron-100 dark:bg-slate-700 text-saffron-600 dark:text-saffron-400 flex items-center justify-center">
+                   <User size={16} />
+                 </div>
+                 <div className="text-left">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100 font-hindi">
+                      {getCategoryDisplayName(categoryKey)}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {groupedData.groups[categoryKey].length} {script === 'iast' ? 'Songs' : 'भजन'}
+                    </p>
+                 </div>
+              </div>
+              <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${expandedCategory === categoryKey ? 'rotate-90' : ''}`} />
+            </button>
 
-          {expandedCategory === categoryKey && (
-             <ul className="divide-y divide-slate-100 dark:divide-slate-700 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-               {groupedData.groups[categoryKey].map(bhajan => (
-                 <li key={bhajan.id}>
-                   <button
-                     onClick={() => onSelect(bhajan)}
-                     className="w-full text-left py-3 px-4 pl-14 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors"
-                   >
-                      <div className="font-hindi text-slate-700 dark:text-slate-200 font-medium">
-                         {script === 'iast' ? bhajan.titleIAST : bhajan.title}
-                      </div>
-                      <div className="text-xs text-slate-400 font-hindi mt-0.5 truncate">
-                         {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
-                      </div>
-                   </button>
-                 </li>
-               ))}
-             </ul>
-          )}
-        </div>
-      ))}
+            {expandedCategory === categoryKey && (
+               <ul className="divide-y divide-slate-100 dark:divide-slate-700 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                 {groupedData.groups[categoryKey].map((bhajan, bIndex) => (
+                   <li key={bhajan.id} className="animate-fade-in" style={{ animationDelay: `${bIndex * 20}ms` }}>
+                     <button
+                       onClick={() => onSelect(bhajan)}
+                       className="w-full text-left py-3 px-4 pl-14 hover:bg-saffron-50 dark:hover:bg-slate-800 transition-colors active:bg-saffron-100"
+                     >
+                        <div className="font-hindi text-slate-700 dark:text-slate-200 font-medium">
+                           {script === 'iast' ? bhajan.titleIAST : bhajan.title}
+                        </div>
+                        <div className="text-xs text-slate-400 font-hindi mt-0.5 truncate">
+                           {script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine}
+                        </div>
+                     </button>
+                   </li>
+                 ))}
+               </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

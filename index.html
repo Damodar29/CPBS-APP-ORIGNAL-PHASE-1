@@ -34,13 +34,33 @@
               logo: ['"Dancing Script"', 'cursive'],
             },
             animation: {
-              'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+              'fade-in-up': 'fadeInUp 0.4s ease-out forwards',
+              'fade-in': 'fadeIn 0.3s ease-out forwards',
+              'slide-in-right': 'slideInRight 0.3s ease-out forwards',
+              'slide-in-bottom': 'slideInBottom 0.3s ease-out forwards',
+              'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
               'pulse-slow': 'pulse 3s infinite',
             },
             keyframes: {
               fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '0%': { opacity: '0', transform: 'translateY(15px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideInRight: {
+                '0%': { transform: 'translateX(100%)' },
+                '100%': { transform: 'translateX(0)' },
+              },
+              slideInBottom: {
+                '0%': { transform: 'translateY(100%)' },
+                '100%': { transform: 'translateY(0)' },
+              },
+              pop: {
+                '0%': { transform: 'scale(0.9)', opacity: '0' },
+                '100%': { transform: 'scale(1)', opacity: '1' },
               }
             }
           }
@@ -52,14 +72,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
       ::-webkit-scrollbar {
-        width: 6px;
+        width: 8px;
       }
       ::-webkit-scrollbar-track {
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background-color: rgba(156, 163, 175, 0.5);
+        background-color: rgba(156, 163, 175, 0.8);
         border-radius: 20px;
+        border: 2px solid transparent;
+        background-clip: content-box;
       }
       .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -68,6 +90,19 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+      .left-scrollbar {
+        direction: rtl;
+      }
+      .left-scrollbar > * {
+        direction: ltr;
+      }
+      /* Utility class to delay animations for staggering */
+      .delay-75 { animation-delay: 75ms; }
+      .delay-100 { animation-delay: 100ms; }
+      .delay-150 { animation-delay: 150ms; }
+      .delay-200 { animation-delay: 200ms; }
+      .delay-300 { animation-delay: 300ms; }
+      
       body {
         -webkit-tap-highlight-color: transparent;
         user-select: none;

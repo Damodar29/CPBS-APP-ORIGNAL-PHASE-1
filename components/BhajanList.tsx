@@ -13,10 +13,11 @@ interface BhajanListProps {
   script: ScriptType;
   indexMode: 'latin' | 'devanagari';
   onIndexModeChange: (mode: 'latin' | 'devanagari') => void;
+  azSliderSide: 'left' | 'right'; // New prop
 }
 
 export const BhajanList: React.FC<BhajanListProps> = ({ 
-  bhajans, onSelect, searchQuery, script, indexMode, onIndexModeChange 
+  bhajans, onSelect, searchQuery, script, indexMode, onIndexModeChange, azSliderSide 
 }) => {
   
   // Group bhajans based on Index Mode
@@ -116,23 +117,34 @@ export const BhajanList: React.FC<BhajanListProps> = ({
     );
   }
 
+  // Determine padding based on Slider Side
+  const listPaddingClass = azSliderSide === 'left' ? 'pl-12 pr-4' : 'pr-12 pl-4';
+  const headerPaddingClass = azSliderSide === 'left' ? 'pl-12 pr-4' : 'pr-12 pl-4';
+
   // --- SEARCH RESULTS VIEW (Flat List, No Slider) ---
   if (searchQuery.trim()) {
     return (
       <div className="pt-2 px-2">
         <div className="space-y-2">
-          {bhajans.map((bhajan) => {
+          {bhajans.map((bhajan, index) => {
             const displayTitle = script === 'iast' ? bhajan.titleIAST : bhajan.title;
             const matchedSnippet = getMatchingSnippet(bhajan, searchQuery, script);
             const isContentMatch = !!matchedSnippet;
             const subtitle = matchedSnippet || (script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine);
             const authorName = getAuthorName(bhajan);
             
+            // Staggered delay for search results
+            const delayStyle = { animationDelay: `${Math.min(index * 30, 600)}ms` };
+
             return (
-              <div key={bhajan.id} className="animate-fade-in-up">
+              <div 
+                key={bhajan.id} 
+                className="animate-fade-in-up opacity-0 fill-mode-forwards" 
+                style={delayStyle}
+              >
                 <button
                   onClick={() => onSelect(bhajan)}
-                  className="w-full text-left p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:border-saffron-300 dark:hover:border-saffron-500/50 hover:shadow-md transition-all group relative overflow-hidden"
+                  className="w-full text-left p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 hover:border-saffron-300 dark:hover:border-saffron-500/50 hover:shadow-md transition-all group relative overflow-hidden active:scale-[0.98] active:bg-saffron-50 dark:active:bg-slate-700"
                 >
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-hindi font-bold text-slate-800 dark:text-slate-100 truncate pr-6 leading-tight mb-1">
@@ -180,7 +192,7 @@ export const BhajanList: React.FC<BhajanListProps> = ({
         {sortedKeys.map((key) => (
           <div key={key} id={`section-${key}`} className="mb-2 scroll-mt-20"> 
             {/* Sticky Section Header */}
-            <div className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-2 border-y border-slate-200 dark:border-slate-800 text-saffron-600 dark:text-saffron-400 text-sm font-black font-sans shadow-sm flex items-center">
+            <div className={`sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md py-2 border-y border-slate-200 dark:border-slate-800 text-saffron-600 dark:text-saffron-400 text-sm font-black font-sans shadow-sm flex items-center ${headerPaddingClass}`}>
               <span className="bg-saffron-100 dark:bg-slate-800 w-8 h-8 flex items-center justify-center rounded-lg shadow-sm border border-saffron-200 dark:border-slate-700">
                 {key}
               </span>
@@ -188,16 +200,22 @@ export const BhajanList: React.FC<BhajanListProps> = ({
             </div>
             
             <ul className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700/50">
-              {groupedBhajans[key].map((bhajan) => {
+              {groupedBhajans[key].map((bhajan, index) => {
                 const displayTitle = script === 'iast' ? bhajan.titleIAST : bhajan.title;
                 const subtitle = script === 'iast' ? bhajan.firstLineIAST : bhajan.firstLine;
                 const authorName = getAuthorName(bhajan);
+                
+                // Keep animation delay low for smooth scrolling experience without long waits
+                // Only animate first few items per section to improve performance on large lists
+                const shouldAnimate = index < 15;
+                const delayStyle = shouldAnimate ? { animationDelay: `${index * 20}ms` } : {};
+                const animClass = shouldAnimate ? "animate-fade-in-up opacity-0 fill-mode-forwards" : "";
 
                 return (
-                  <li key={bhajan.id}>
+                  <li key={bhajan.id} className={animClass} style={delayStyle}>
                     <button
                       onClick={() => onSelect(bhajan)}
-                      className="w-full text-left py-4 pl-5 pr-12 hover:bg-saffron-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group"
+                      className={`w-full text-left py-4 hover:bg-saffron-50 dark:hover:bg-slate-700/50 active:bg-saffron-100 dark:active:bg-slate-700 transition-colors flex items-center justify-between group ${listPaddingClass}`}
                     >
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-hindi font-medium text-slate-800 dark:text-slate-200 truncate leading-snug mb-1 group-hover:text-saffron-700 dark:group-hover:text-saffron-400 transition-colors">
@@ -228,6 +246,7 @@ export const BhajanList: React.FC<BhajanListProps> = ({
         onSelect={scrollToSection} 
         indexMode={indexMode}
         onToggleMode={() => onIndexModeChange(indexMode === 'latin' ? 'devanagari' : 'latin')}
+        side={azSliderSide}
       />
     </div>
   );

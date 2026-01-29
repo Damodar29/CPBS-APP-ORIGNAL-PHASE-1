@@ -36,34 +36,37 @@ export const LectureList: React.FC<LectureListProps> = ({ lectures, onSelect, se
         </div>
         
         <ul className="divide-y divide-slate-100 dark:divide-slate-700">
-            {lectures.map((lecture) => (
-                <li key={lecture.id}>
-                    <button 
-                        onClick={() => onSelect(lecture)}
-                        className="w-full text-left p-4 hover:bg-saffron-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-4 group"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
-                            <Headphones size={20} />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-hindi font-bold text-slate-800 dark:text-slate-200 text-base leading-snug group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
-                                <HighlightText text={lecture.title} highlight={searchQuery} />
-                            </h3>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 dark:text-slate-500">
-                                {lecture.date && (
-                                    <span className="flex items-center gap-1">
-                                        <Calendar size={10} /> <HighlightText text={lecture.date} highlight={searchQuery} />
-                                    </span>
-                                )}
-                                <span className="truncate">
-                                    {lecture.audio?.length || 0} Audio Tracks
-                                </span>
+            {lectures.map((lecture, index) => {
+                const delayStyle = { animationDelay: `${index * 40}ms` };
+                return (
+                    <li key={lecture.id} className="animate-fade-in-up opacity-0 fill-mode-forwards" style={delayStyle}>
+                        <button 
+                            onClick={() => onSelect(lecture)}
+                            className="w-full text-left p-4 hover:bg-saffron-50 dark:hover:bg-slate-700/50 active:bg-saffron-100 dark:active:bg-slate-700 transition-colors flex items-center gap-4 group"
+                        >
+                            <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/30">
+                                <Headphones size={20} />
                             </div>
-                        </div>
-                    </button>
-                </li>
-            ))}
+                            
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-hindi font-bold text-slate-800 dark:text-slate-200 text-base leading-snug group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
+                                    <HighlightText text={lecture.title} highlight={searchQuery} />
+                                </h3>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                    {lecture.date && (
+                                        <span className="flex items-center gap-1">
+                                            <Calendar size={10} /> <HighlightText text={lecture.date} highlight={searchQuery} />
+                                        </span>
+                                    )}
+                                    <span className="truncate">
+                                        {lecture.audio?.length || 0} Audio Tracks
+                                    </span>
+                                </div>
+                            </div>
+                        </button>
+                    </li>
+                );
+            })}
         </ul>
       </div>
     </div>
